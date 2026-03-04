@@ -4,7 +4,7 @@
  */
 
 import type { Browser, BrowserContext } from "playwright-core";
-import type { LaunchOptions, LaunchContextOptions } from "./types.js";
+import type { LaunchOptions, LaunchContextOptions, LaunchPersistentContextOptions } from "./types.js";
 import { DEFAULT_VIEWPORT, getDefaultStealthArgs } from "./config.js";
 import { ensureBinary } from "./download.js";
 import { parseProxyUrl } from "./proxy.js";
@@ -84,6 +84,53 @@ export async function launchContext(
     await origClose();
     await browser.close();
   };
+
+  return context;
+}
+
+/**
+ * Launch stealth browser with a persistent user profile (non-incognito).
+ * Uses Playwright's chromium.launchPersistentContext() under the hood.
+ *
+ * This avoids incognito detection by services like BrowserScan (-10% penalty)
+ * and enables session persistence (cookies, localStorage) across launches.
+ *
+ * @example
+ * ```ts
+ * import { launchPersistentContext } from 'cloakbrowser';
+ * const context = await launchPersistentContext({
+ *   userDataDir: './chrome-profile',
+ *   headless: false,
+ *   proxy: 'http://user:pass@host:port',
+ *   geoip: true,
+ * });
+ * const page = context.pages()[0] || await context.newPage();
+ * await page.goto('https://example.com');
+ * await context.close();
+ * ```
+ */
+export async function launchPersistentContext(
+  options: LaunchPersistentContextOptions
+): Promise<BrowserContext> {
+  const { chromium } = await import("playwright-core");
+
+  const binaryPath = process.env.CLOAKBROWSER_BINARY_PATH || (await ensureBinary());
+  const resolved = await maybeResolveGeoip(options);
+  const args = buildArgs({ ...options, ...resolved });
+
+  const context = await chromium.launchPersistentContext(options.userDataDir, {
+    executablePath: binaryPath,
+    headless: options.headless ?? true,
+    args,
+    ignoreDefaultArgs: ["--enable-automation"],
+    ...(options.proxy ? { proxy: parseProxyUrl(options.proxy) } : {}),
+    ...(options.userAgent ? { userAgent: options.userAgent } : {}),
+    viewport: options.viewport ?? DEFAULT_VIEWPORT,
+    ...(resolved.locale ? { locale: resolved.locale } : {}),
+    ...(resolved.timezone ? { timezoneId: resolved.timezone } : {}),
+    ...(options.colorScheme ? { colorScheme: options.colorScheme } : {}),
+    ...options.launchOptions,
+  });
 
   return context;
 }

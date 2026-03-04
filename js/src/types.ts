@@ -34,6 +34,21 @@ export interface LaunchContextOptions extends LaunchOptions {
   colorScheme?: "light" | "dark" | "no-preference";
 }
 
+export interface LaunchPersistentContextOptions extends LaunchOptions {
+  /** Path to user data directory for persistent profile. */
+  userDataDir: string;
+  /** Custom user agent string. */
+  userAgent?: string;
+  /** Viewport size. */
+  viewport?: { width: number; height: number };
+  /** Browser locale for context, e.g. "en-US". */
+  locale?: string;
+  /** Timezone for context, e.g. "America/New_York". */
+  timezoneId?: string;
+  /** Color scheme preference. */
+  colorScheme?: "light" | "dark" | "no-preference";
+}
+
 export interface BinaryInfo {
   version: string;
   platform: string;
