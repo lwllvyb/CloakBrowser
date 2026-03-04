@@ -34,7 +34,9 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
     headless: options.headless ?? true,
     args,
     ignoreDefaultArgs: ["--enable-automation"],
-    ...(options.proxy ? { proxy: parseProxyUrl(options.proxy) } : {}),
+    ...(options.proxy
+      ? { proxy: typeof options.proxy === "string" ? parseProxyUrl(options.proxy) : options.proxy }
+      : {}),
     ...options.launchOptions,
   });
 
@@ -62,7 +64,10 @@ export async function launchContext(
 ): Promise<BrowserContext> {
   // Resolve geoip BEFORE launch() to avoid double-resolution
   const resolved = await maybeResolveGeoip(options);
-  const browser = await launch({ ...options, ...resolved, geoip: false });
+  // Skip --fingerprint-timezone binary flag: it only applies to the default
+  // context and interferes with Playwright's timezoneId on new contexts.
+  // Timezone is set via browser.newContext(timezoneId: ...) below instead.
+  const browser = await launch({ ...options, ...resolved, geoip: false, timezone: undefined });
 
   let context: BrowserContext;
   try {
@@ -123,7 +128,9 @@ export async function launchPersistentContext(
     headless: options.headless ?? true,
     args,
     ignoreDefaultArgs: ["--enable-automation"],
-    ...(options.proxy ? { proxy: parseProxyUrl(options.proxy) } : {}),
+    ...(options.proxy
+      ? { proxy: typeof options.proxy === "string" ? parseProxyUrl(options.proxy) : options.proxy }
+      : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     viewport: options.viewport ?? DEFAULT_VIEWPORT,
     ...(resolved.locale ? { locale: resolved.locale } : {}),
@@ -146,7 +153,9 @@ async function maybeResolveGeoip(
   if (options.timezone && options.locale) return { timezone: options.timezone, locale: options.locale };
 
   const { resolveProxyGeo } = await import("./geoip.js");
-  const { timezone: geoTz, locale: geoLocale } = await resolveProxyGeo(options.proxy);
+  const proxyUrl = typeof options.proxy === "string" ? options.proxy : options.proxy.server;
+  if (!proxyUrl) return { timezone: options.timezone, locale: options.locale };
+  const { timezone: geoTz, locale: geoLocale } = await resolveProxyGeo(proxyUrl);
   return {
     timezone: options.timezone ?? geoTz ?? undefined,
     locale: options.locale ?? geoLocale ?? undefined,

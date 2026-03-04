@@ -67,6 +67,11 @@ const browser = await launch({
   proxy: 'http://user:pass@proxy:8080',
 });
 
+// With proxy object (bypass, separate auth fields)
+const browser = await launch({
+  proxy: { server: 'http://proxy:8080', bypass: '.google.com', username: 'user', password: 'pass' },
+});
+
 // Headed mode (visible browser window)
 const browser = await launch({ headless: false });
 
@@ -95,7 +100,7 @@ const context = await launchContext({
   timezoneId: 'America/New_York',
 });
 
-// Persistent profile — cookies/localStorage survive restarts, avoids incognito detection
+// Persistent profile — stay logged in, bypass incognito detection, load extensions
 const ctx = await launchPersistentContext({
   userDataDir: './chrome-profile',
   headless: false,
@@ -194,6 +199,21 @@ const page = await browser.newPage();
 - One of: `playwright-core` >= 1.40 or `puppeteer-core` >= 21
 
 ## Troubleshooting
+
+**Site detects incognito / private browsing mode**
+
+By default, `launch()` opens an incognito context. Some sites (like BrowserScan) detect this. Use `launchPersistentContext()` instead — it runs with a real user profile:
+
+```javascript
+import { launchPersistentContext } from 'cloakbrowser';
+
+const ctx = await launchPersistentContext({
+  userDataDir: './my-profile',
+  headless: false,
+});
+```
+
+This also gives you cookie and localStorage persistence across sessions.
 
 **reCAPTCHA v3 scores are low (0.1–0.3)**
 

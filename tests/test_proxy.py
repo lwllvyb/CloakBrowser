@@ -1,6 +1,8 @@
 """Tests for proxy URL parsing and credential extraction."""
 
-from cloakbrowser.browser import _build_proxy_kwargs, _parse_proxy_url
+from unittest.mock import patch
+
+from cloakbrowser.browser import _build_proxy_kwargs, _maybe_resolve_geoip, _parse_proxy_url
 
 
 class TestParseProxyUrl:
@@ -48,3 +50,51 @@ class TestBuildProxyKwargs:
         assert result == {
             "proxy": {"server": "http://proxy:8080", "username": "user", "password": "pass"}
         }
+
+    def test_proxy_dict_passthrough(self):
+        proxy_dict = {"server": "http://proxy:8080", "bypass": ".google.com,localhost"}
+        result = _build_proxy_kwargs(proxy_dict)
+        assert result == {"proxy": proxy_dict}
+
+    def test_proxy_dict_with_auth(self):
+        proxy_dict = {
+            "server": "http://proxy:8080",
+            "username": "user",
+            "password": "pass",
+            "bypass": ".example.com",
+        }
+        result = _build_proxy_kwargs(proxy_dict)
+        assert result == {"proxy": proxy_dict}
+
+
+class TestMaybeResolveGeoip:
+    @patch("cloakbrowser.geoip.resolve_proxy_geo", return_value=("America/New_York", "en-US"))
+    def test_geoip_with_string_proxy(self, mock_geo):
+        tz, locale = _maybe_resolve_geoip(True, "http://proxy:8080", None, None)
+        mock_geo.assert_called_once_with("http://proxy:8080")
+        assert tz == "America/New_York"
+        assert locale == "en-US"
+
+    @patch("cloakbrowser.geoip.resolve_proxy_geo", return_value=("Europe/London", "en-GB"))
+    def test_geoip_with_dict_proxy_extracts_server(self, mock_geo):
+        proxy_dict = {"server": "http://proxy:8080", "bypass": ".google.com"}
+        tz, locale = _maybe_resolve_geoip(True, proxy_dict, None, None)
+        mock_geo.assert_called_once_with("http://proxy:8080")
+        assert tz == "Europe/London"
+        assert locale == "en-GB"
+
+    def test_geoip_disabled_skips_resolution(self):
+        tz, locale = _maybe_resolve_geoip(False, "http://proxy:8080", None, None)
+        assert tz is None
+        assert locale is None
+
+    def test_geoip_no_proxy_skips_resolution(self):
+        tz, locale = _maybe_resolve_geoip(True, None, None, None)
+        assert tz is None
+        assert locale is None
+
+    @patch("cloakbrowser.geoip.resolve_proxy_geo", return_value=("Asia/Tokyo", "ja-JP"))
+    def test_geoip_preserves_explicit_timezone(self, mock_geo):
+        tz, locale = _maybe_resolve_geoip(True, "http://proxy:8080", "Europe/Berlin", None)
+        assert tz == "Europe/Berlin"
+        assert locale == "ja-JP"

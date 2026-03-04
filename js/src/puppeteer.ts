@@ -34,10 +34,26 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
   // so we strip them and use page.authenticate() instead.
   let proxyAuth: { username: string; password: string } | undefined;
   if (options.proxy) {
-    const { server, username, password } = parseProxyUrl(options.proxy);
-    args.push(`--proxy-server=${server}`);
-    if (username) {
-      proxyAuth = { username, password: password || "" };
+    if (typeof options.proxy === "string") {
+      const { server, username, password } = parseProxyUrl(options.proxy);
+      args.push(`--proxy-server=${server}`);
+      if (username) {
+        proxyAuth = { username, password: password ?? "" };
+      }
+    } else {
+      // Strip any inline credentials from the server URL — Chromium's
+      // --proxy-server doesn't support them; use page.authenticate() instead.
+      const parsed = parseProxyUrl(options.proxy.server);
+      args.push(`--proxy-server=${parsed.server}`);
+      if (options.proxy.bypass) {
+        args.push(`--proxy-bypass-list=${options.proxy.bypass}`);
+      }
+      // Explicit username/password fields take precedence over inline creds
+      const username = options.proxy.username ?? parsed.username;
+      const password = options.proxy.password ?? parsed.password;
+      if (username) {
+        proxyAuth = { username, password: password ?? "" };
+      }
     }
   }
 
@@ -74,7 +90,9 @@ async function maybeResolveGeoip(
   if (options.timezone && options.locale) return { timezone: options.timezone, locale: options.locale };
 
   const { resolveProxyGeo } = await import("./geoip.js");
-  const { timezone: geoTz, locale: geoLocale } = await resolveProxyGeo(options.proxy);
+  const proxyUrl = typeof options.proxy === "string" ? options.proxy : options.proxy.server;
+  if (!proxyUrl) return { timezone: options.timezone, locale: options.locale };
+  const { timezone: geoTz, locale: geoLocale } = await resolveProxyGeo(proxyUrl);
   return {
     timezone: options.timezone ?? geoTz ?? undefined,
     locale: options.locale ?? geoLocale ?? undefined,

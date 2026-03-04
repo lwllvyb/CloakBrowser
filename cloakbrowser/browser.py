@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 from urllib.parse import unquote, urlparse, urlunparse
 
 from .config import DEFAULT_VIEWPORT, get_default_stealth_args
@@ -25,9 +25,21 @@ from .download import ensure_binary
 logger = logging.getLogger("cloakbrowser")
 
 
+class _ProxySettingsRequired(TypedDict):
+    server: str
+
+
+class ProxySettings(_ProxySettingsRequired, total=False):
+    """Playwright-compatible proxy configuration."""
+
+    bypass: str
+    username: str
+    password: str
+
+
 def launch(
     headless: bool = True,
-    proxy: str | None = None,
+    proxy: str | ProxySettings | None = None,
     args: list[str] | None = None,
     stealth_args: bool = True,
     timezone: str | None = None,
@@ -39,7 +51,10 @@ def launch(
 
     Args:
         headless: Run in headless mode (default True).
-        proxy: Proxy server URL (e.g. 'http://proxy:8080' or 'socks5://proxy:1080').
+        proxy: Proxy URL string or Playwright proxy dict.
+            String: 'http://user:pass@proxy:8080' (credentials auto-extracted).
+            Dict: {"server": "http://proxy:8080", "bypass": ".google.com", ...}
+            — passed directly to Playwright.
         args: Additional Chromium CLI arguments to pass.
         stealth_args: Include default stealth fingerprint args (default True).
             Set to False if you want to pass your own --fingerprint flags.
@@ -94,7 +109,7 @@ def launch(
 
 async def launch_async(
     headless: bool = True,
-    proxy: str | None = None,
+    proxy: str | ProxySettings | None = None,
     args: list[str] | None = None,
     stealth_args: bool = True,
     timezone: str | None = None,
@@ -106,7 +121,7 @@ async def launch_async(
 
     Args:
         headless: Run in headless mode (default True).
-        proxy: Proxy server URL (e.g. 'http://proxy:8080' or 'socks5://proxy:1080').
+        proxy: Proxy URL string or Playwright proxy dict (see launch() for details).
         args: Additional Chromium CLI arguments to pass.
         stealth_args: Include default stealth fingerprint args (default True).
         timezone: IANA timezone (e.g. 'America/New_York'). Sets --fingerprint-timezone binary flag.
@@ -163,7 +178,7 @@ async def launch_async(
 def launch_persistent_context(
     user_data_dir: str | os.PathLike,
     headless: bool = True,
-    proxy: str | None = None,
+    proxy: str | ProxySettings | None = None,
     args: list[str] | None = None,
     stealth_args: bool = True,
     user_agent: str | None = None,
@@ -185,7 +200,7 @@ def launch_persistent_context(
             Created automatically if it doesn't exist. Reuse the same path across
             sessions to restore cookies, localStorage, cached credentials, etc.
         headless: Run in headless mode (default True).
-        proxy: Proxy server URL (e.g. 'http://proxy:8080' or 'socks5://proxy:1080').
+        proxy: Proxy URL string or Playwright proxy dict (see launch() for details).
         args: Additional Chromium CLI arguments.
         stealth_args: Include default stealth fingerprint args (default True).
         user_agent: Custom user agent string.
@@ -259,7 +274,7 @@ def launch_persistent_context(
 async def launch_persistent_context_async(
     user_data_dir: str | os.PathLike,
     headless: bool = True,
-    proxy: str | None = None,
+    proxy: str | ProxySettings | None = None,
     args: list[str] | None = None,
     stealth_args: bool = True,
     user_agent: str | None = None,
@@ -280,7 +295,7 @@ async def launch_persistent_context_async(
         user_data_dir: Path to the directory where browser profile data is stored.
             Created automatically if it doesn't exist.
         headless: Run in headless mode (default True).
-        proxy: Proxy server URL (e.g. 'http://proxy:8080' or 'socks5://proxy:1080').
+        proxy: Proxy URL string or Playwright proxy dict (see launch() for details).
         args: Additional Chromium CLI arguments.
         stealth_args: Include default stealth fingerprint args (default True).
         user_agent: Custom user agent string.
@@ -356,7 +371,7 @@ async def launch_persistent_context_async(
 
 def launch_context(
     headless: bool = True,
-    proxy: str | None = None,
+    proxy: str | ProxySettings | None = None,
     args: list[str] | None = None,
     stealth_args: bool = True,
     user_agent: str | None = None,
@@ -374,7 +389,7 @@ def launch_context(
 
     Args:
         headless: Run in headless mode (default True).
-        proxy: Proxy server URL.
+        proxy: Proxy URL string or Playwright proxy dict (see launch() for details).
         args: Additional Chromium CLI arguments.
         stealth_args: Include default stealth fingerprint args (default True).
         user_agent: Custom user agent string.
@@ -436,7 +451,7 @@ def launch_context(
 
 def _maybe_resolve_geoip(
     geoip: bool,
-    proxy: str | None,
+    proxy: str | ProxySettings | None,
     timezone: str | None,
     locale: str | None,
 ) -> tuple[str | None, str | None]:
@@ -446,7 +461,10 @@ def _maybe_resolve_geoip(
 
     from .geoip import resolve_proxy_geo
 
-    geo_tz, geo_locale = resolve_proxy_geo(proxy)
+    proxy_url = proxy.get("server") if isinstance(proxy, dict) else proxy
+    if not proxy_url:
+        return timezone, locale
+    geo_tz, geo_locale = resolve_proxy_geo(proxy_url)
     if timezone is None:
         timezone = geo_tz
     if locale is None:
@@ -500,8 +518,10 @@ def _parse_proxy_url(proxy: str) -> dict[str, Any]:
     return result
 
 
-def _build_proxy_kwargs(proxy: str | None) -> dict[str, Any]:
+def _build_proxy_kwargs(proxy: str | ProxySettings | None) -> dict[str, Any]:
     """Build proxy kwargs for Playwright launch."""
     if proxy is None:
         return {}
+    if isinstance(proxy, dict):
+        return {"proxy": proxy}
     return {"proxy": _parse_proxy_url(proxy)}

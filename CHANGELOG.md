@@ -6,6 +6,10 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ---
 
+## [0.3.6] — 2026-03-04
+
+- **[wrapper]** `proxy` parameter now accepts a Playwright proxy dict (`{server, bypass, username, password}`) in addition to URL strings — enables bypass lists and separate auth fields (PR #24). **TS note:** type changed from `string` to `string | object` — code that assumed `proxy` is always a string may need a `typeof` narrowing check
+
 ## [0.3.5] — 2026-03-04
 
 - **[wrapper]** Add `launch_persistent_context()` and `launch_persistent_context_async()` (Python) — persistent browser profiles with cookie/localStorage persistence across sessions, avoids incognito detection (thanks [@evelaa123](https://github.com/evelaa123), [@yahooguntu](https://github.com/yahooguntu) — PRs #22, #17)

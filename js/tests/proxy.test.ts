@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseProxyUrl } from "../src/proxy.js";
+import type { LaunchOptions } from "../src/types.js";
 
 describe("parseProxyUrl", () => {
   it("passes through URL without credentials", () => {
@@ -45,5 +46,39 @@ describe("parseProxyUrl", () => {
 
   it("passes through unparseable string", () => {
     expect(parseProxyUrl("not-a-url")).toEqual({ server: "not-a-url" });
+  });
+});
+
+describe("proxy dict type", () => {
+  it("accepts string proxy in LaunchOptions", () => {
+    const opts: LaunchOptions = { proxy: "http://proxy:8080" };
+    expect(typeof opts.proxy).toBe("string");
+  });
+
+  it("accepts dict proxy with bypass in LaunchOptions", () => {
+    const opts: LaunchOptions = {
+      proxy: { server: "http://proxy:8080", bypass: ".google.com,localhost" },
+    };
+    expect(typeof opts.proxy).toBe("object");
+    if (typeof opts.proxy === "object") {
+      expect(opts.proxy.server).toBe("http://proxy:8080");
+      expect(opts.proxy.bypass).toBe(".google.com,localhost");
+    }
+  });
+
+  it("accepts dict proxy with auth and bypass in LaunchOptions", () => {
+    const opts: LaunchOptions = {
+      proxy: {
+        server: "http://proxy:8080",
+        username: "user",
+        password: "pass",
+        bypass: ".example.com",
+      },
+    };
+    if (typeof opts.proxy === "object") {
+      expect(opts.proxy.username).toBe("user");
+      expect(opts.proxy.password).toBe("pass");
+      expect(opts.proxy.bypass).toBe(".example.com");
+    }
   });
 });

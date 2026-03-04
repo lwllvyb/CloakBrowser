@@ -203,6 +203,9 @@ browser = launch(headless=False)
 # With proxy
 browser = launch(proxy="http://user:pass@proxy:8080")
 
+# With proxy dict (bypass, separate auth fields)
+browser = launch(proxy={"server": "http://proxy:8080", "bypass": ".google.com", "username": "user", "password": "pass"})
+
 # With extra Chrome args
 browser = launch(args=["--disable-gpu"])
 
@@ -258,6 +261,12 @@ context.close()
 ### `launch_persistent_context()`
 
 Same as `launch_context()`, but with a persistent user profile. Cookies, localStorage, and cache persist across sessions. Also avoids incognito detection by services like BrowserScan.
+
+Use this when you need to:
+- **Stay logged in** across runs (cookies/sessions survive restarts)
+- **Bypass incognito detection** (some sites flag empty, ephemeral profiles)
+- **Load Chrome extensions** (extensions only work from a real user data dir)
+- **Build natural browsing history** (cached fonts, service workers, IndexedDB accumulate over time, making the profile look more realistic)
 
 ```python
 from cloakbrowser import launch_persistent_context
@@ -614,6 +623,28 @@ patchright install-deps chromium
 **macOS: Blocked on some sites that pass on Linux**
 
 The macOS fingerprint profile has known inconsistencies that aggressive bot detection catches. If a site blocks you on macOS but works on Linux, switch to a Windows fingerprint profile by passing `stealth_args=False` and manually setting `--fingerprint-platform=windows` with matching GPU flags (see [Fingerprint Management](#fingerprint-management) for the full flag list).
+
+**Site detects incognito / private browsing mode**
+
+By default, `launch()` opens an incognito context. Some sites (like BrowserScan) detect this. Use `launch_persistent_context()` instead — it runs with a real user profile, so incognito detection passes:
+
+```python
+from cloakbrowser import launch_persistent_context
+
+ctx = launch_persistent_context("./my-profile", headless=False)
+page = ctx.new_page()
+```
+
+```javascript
+import { launchPersistentContext } from 'cloakbrowser';
+
+const ctx = await launchPersistentContext({
+  userDataDir: './my-profile',
+  headless: false,
+});
+```
+
+This also gives you cookie and localStorage persistence across sessions.
 
 **reCAPTCHA v3 scores are low (0.1–0.3)**
 
