@@ -30,7 +30,9 @@ RUN cd js && npm install && npm run build
 COPY examples/ examples/
 
 # Pre-download stealth Chromium binary during build (not at runtime)
-RUN python -c "from cloakbrowser import ensure_binary; ensure_binary()"
+# Remove welcome marker so users see it on first container run
+RUN python -c "from cloakbrowser import ensure_binary; ensure_binary()" \
+    && rm -f ~/.cloakbrowser/.welcome_shown
 
 # CLI shortcuts
 COPY bin/cloaktest /usr/local/bin/cloaktest

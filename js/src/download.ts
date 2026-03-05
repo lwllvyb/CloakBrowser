@@ -65,6 +65,7 @@ export async function ensureBinary(): Promise<string> {
   const binaryPath = getBinaryPath(effective);
 
   if (fs.existsSync(binaryPath) && isExecutable(binaryPath)) {
+    showWelcome();
     maybeTriggerUpdateCheck();
     return binaryPath;
   }
@@ -139,6 +140,28 @@ export async function checkForUpdate(): Promise<string | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Welcome message (shown once per install)
+// ---------------------------------------------------------------------------
+
+function showWelcome(): void {
+  const marker = path.join(getCacheDir(), ".welcome_shown");
+  if (fs.existsSync(marker)) return;
+  console.log();
+  console.log("  CloakBrowser — stealth Chromium for automation");
+  console.log("  https://github.com/CloakHQ/CloakBrowser");
+  console.log();
+  console.log("  Issues?  https://github.com/CloakHQ/CloakBrowser/issues");
+  console.log("  Star us if CloakBrowser helps your project!");
+  console.log();
+  try {
+    fs.mkdirSync(getCacheDir(), { recursive: true });
+    fs.writeFileSync(marker, "");
+  } catch {
+    // Non-fatal
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
@@ -177,15 +200,7 @@ async function downloadAndExtract(version?: string): Promise<void> {
     }
 
     await extractArchive(tmpPath, binaryDir, binaryPath);
-    console.log(
-      `[cloakbrowser] Visit https://cloakbrowser.dev for docs and release notifications.`
-    );
-    console.log(
-      `[cloakbrowser] Issues? https://github.com/CloakHQ/CloakBrowser/issues`
-    );
-    console.log(
-      `[cloakbrowser] Star us if CloakBrowser helps: https://github.com/CloakHQ/CloakBrowser`
-    );
+    showWelcome();
   } finally {
     // Clean up temp file
     if (fs.existsSync(tmpPath)) {

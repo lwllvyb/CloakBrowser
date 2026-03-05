@@ -50,6 +50,25 @@ DOWNLOAD_TIMEOUT = 600.0
 UPDATE_CHECK_INTERVAL = 3600
 
 
+def _show_welcome() -> None:
+    """Show welcome message on first launch. Uses a marker file to show only once."""
+    marker = get_cache_dir() / ".welcome_shown"
+    if marker.exists():
+        return
+    print()
+    print("  CloakBrowser — stealth Chromium for automation")
+    print("  https://github.com/CloakHQ/CloakBrowser")
+    print()
+    print("  Issues?  https://github.com/CloakHQ/CloakBrowser/issues")
+    print("  Star us if CloakBrowser helps your project!")
+    print()
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text("")
+    except OSError:
+        pass
+
+
 def ensure_binary() -> str:
     """Ensure the stealth Chromium binary is available. Download if needed.
 
@@ -77,6 +96,7 @@ def ensure_binary() -> str:
 
     if binary_path.exists() and _is_executable(binary_path):
         logger.debug("Binary found in cache: %s (version %s)", binary_path, effective)
+        _show_welcome()
         _maybe_trigger_update_check()
         return str(binary_path)
 
@@ -146,9 +166,7 @@ def _download_and_extract(version: str | None = None) -> None:
             _verify_download_checksum(tmp_path, version)
 
         _extract_archive(tmp_path, binary_dir, binary_path)
-        logger.info("Visit https://cloakbrowser.dev for docs and release notifications.")
-        logger.info("Issues? https://github.com/CloakHQ/CloakBrowser/issues")
-        logger.info("Star us if CloakBrowser helps: https://github.com/CloakHQ/CloakBrowser")
+        _show_welcome()
     finally:
         # Clean up temp file
         tmp_path.unlink(missing_ok=True)
