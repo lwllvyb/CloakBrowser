@@ -6,6 +6,10 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ---
 
+## [0.3.7] — 2026-03-05
+
+- **[wrapper]** Unify timezone parameter: rename `timezone_id` to `timezone` in `launch_context()`, `launch_persistent_context()`, and `launch_persistent_context_async()` (Python). Old `timezone_id` still works with a deprecation warning. JS: deprecate `timezoneId` on `LaunchContextOptions` — use `timezone` (inherited from `LaunchOptions`)
+
 ## [0.3.6] — 2026-03-04
 
 - **[wrapper]** `proxy` parameter now accepts a Playwright proxy dict (`{server, bypass, username, password}`) in addition to URL strings — enables bypass lists and separate auth fields (PR #24). **TS note:** type changed from `string` to `string | object` — code that assumed `proxy` is always a string may need a `typeof` narrowing check

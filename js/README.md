@@ -97,7 +97,7 @@ const context = await launchContext({
   userAgent: 'Custom UA',
   viewport: { width: 1920, height: 1080 },
   locale: 'en-US',
-  timezoneId: 'America/New_York',
+  timezone: 'America/New_York',
 });
 
 // Persistent profile — stay logged in, bypass incognito detection, load extensions

@@ -251,7 +251,7 @@ context = launch_context(
     user_agent="Custom UA",
     viewport={"width": 1920, "height": 1080},
     locale="en-US",
-    timezone_id="America/New_York",
+    timezone="America/New_York",
 )
 page = context.new_page()
 page.goto("https://protected-site.com")
@@ -281,7 +281,7 @@ ctx.close()  # profile saved
 ctx = launch_persistent_context("./my-profile", headless=False)
 ```
 
-Supports all the same options as `launch_context()`: `proxy`, `user_agent`, `viewport`, `locale`, `timezone_id`, `color_scheme`, `geoip`.
+Supports all the same options as `launch_context()`: `proxy`, `user_agent`, `viewport`, `locale`, `timezone`, `color_scheme`, `geoip`.
 
 Async version: `launch_persistent_context_async()`.
 
@@ -327,7 +327,7 @@ const context = await launchContext({
   userAgent: 'Custom UA',
   viewport: { width: 1920, height: 1080 },
   locale: 'en-US',
-  timezoneId: 'America/New_York',
+  timezone: 'America/New_York',
 });
 const page = await context.newPage();
 

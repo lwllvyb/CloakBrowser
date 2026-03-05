@@ -9,6 +9,17 @@ import { DEFAULT_VIEWPORT, getDefaultStealthArgs } from "./config.js";
 import { ensureBinary } from "./download.js";
 import { parseProxyUrl } from "./proxy.js";
 
+/** @internal Migrate deprecated timezoneId → timezone, warn once. Exported for testing. */
+export function migrateTimezoneId<T extends { timezone?: string; timezoneId?: string }>(options: T): T {
+  if (options.timezoneId != null) {
+    console.warn("[cloakbrowser] timezoneId is deprecated, use timezone instead");
+    const merged = { ...options, timezone: options.timezone ?? options.timezoneId };
+    delete (merged as any).timezoneId;
+    return merged;
+  }
+  return options;
+}
+
 /**
  * Launch stealth Chromium browser via Playwright.
  *
@@ -62,6 +73,7 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
 export async function launchContext(
   options: LaunchContextOptions = {}
 ): Promise<BrowserContext> {
+  options = migrateTimezoneId(options);
   // Resolve geoip BEFORE launch() to avoid double-resolution
   const resolved = await maybeResolveGeoip(options);
   // Skip --fingerprint-timezone binary flag: it only applies to the default
@@ -117,6 +129,7 @@ export async function launchContext(
 export async function launchPersistentContext(
   options: LaunchPersistentContextOptions
 ): Promise<BrowserContext> {
+  options = migrateTimezoneId(options);
   const { chromium } = await import("playwright-core");
 
   const binaryPath = process.env.CLOAKBROWSER_BINARY_PATH || (await ensureBinary());

@@ -7,7 +7,7 @@ import {
   getBinaryDir,
   getDownloadUrl,
 } from "../src/config.js";
-import { _buildArgsForTest } from "../src/playwright.js";
+import { _buildArgsForTest, migrateTimezoneId } from "../src/playwright.js";
 
 describe("config", () => {
   it("CHROMIUM_VERSION matches expected format", () => {
@@ -96,5 +96,32 @@ describe("buildArgs timezone/locale", () => {
     const args = _buildArgsForTest({});
     expect(args.some(a => a.startsWith("--fingerprint-timezone="))).toBe(false);
     expect(args.some(a => a.startsWith("--lang="))).toBe(false);
+  });
+});
+
+describe("migrateTimezoneId deprecation", () => {
+  it("migrates timezoneId to timezone", () => {
+    const result = migrateTimezoneId({ timezoneId: "Europe/Paris" });
+    expect(result.timezone).toBe("Europe/Paris");
+    expect(result).not.toHaveProperty("timezoneId");
+  });
+
+  it("preserves explicit timezone over timezoneId", () => {
+    const result = migrateTimezoneId({ timezone: "UTC", timezoneId: "Europe/Paris" });
+    expect(result.timezone).toBe("UTC");
+    expect(result).not.toHaveProperty("timezoneId");
+  });
+
+  it("returns options unchanged when no timezoneId", () => {
+    const opts = { timezone: "UTC" };
+    const result = migrateTimezoneId(opts);
+    expect(result).toBe(opts); // same reference, no copy
+    expect(result.timezone).toBe("UTC");
+  });
+
+  it("returns options unchanged when neither is set", () => {
+    const opts = {};
+    const result = migrateTimezoneId(opts);
+    expect(result).toBe(opts);
   });
 });

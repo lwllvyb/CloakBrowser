@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
+import warnings
 from typing import Any, Literal, TypedDict
 from urllib.parse import unquote, urlparse, urlunparse
 
@@ -23,6 +24,17 @@ from .config import DEFAULT_VIEWPORT, get_default_stealth_args
 from .download import ensure_binary
 
 logger = logging.getLogger("cloakbrowser")
+
+
+def _migrate_timezone_id(timezone: str | None, kwargs: dict[str, Any]) -> str | None:
+    """Pop deprecated timezone_id from kwargs, warn, return resolved timezone."""
+    if "timezone_id" in kwargs:
+        warnings.warn("timezone_id is deprecated, use timezone instead", FutureWarning, stacklevel=3)
+        if timezone is None:
+            timezone = kwargs.pop("timezone_id")
+        else:
+            kwargs.pop("timezone_id")
+    return timezone
 
 
 class _ProxySettingsRequired(TypedDict):
@@ -184,7 +196,7 @@ def launch_persistent_context(
     user_agent: str | None = None,
     viewport: dict | None = None,
     locale: str | None = None,
-    timezone_id: str | None = None,
+    timezone: str | None = None,
     color_scheme: Literal["light", "dark", "no-preference"] | None = None,
     geoip: bool = False,
     **kwargs: Any,
@@ -206,7 +218,7 @@ def launch_persistent_context(
         user_agent: Custom user agent string.
         viewport: Viewport size dict, e.g. {"width": 1920, "height": 1080}.
         locale: Browser locale, e.g. "en-US".
-        timezone_id: Timezone, e.g. "America/New_York".
+        timezone: IANA timezone (e.g. 'America/New_York').
         color_scheme: Color scheme preference — 'light', 'dark', or 'no-preference'.
             Default: None (uses Chromium default, which is 'light').
         geoip: Auto-detect timezone/locale from proxy IP (default False).
@@ -226,9 +238,11 @@ def launch_persistent_context(
     """
     from patchright.sync_api import sync_playwright
 
+    timezone = _migrate_timezone_id(timezone, kwargs)
+
     binary_path = ensure_binary()
-    timezone_id, locale = _maybe_resolve_geoip(geoip, proxy, timezone_id, locale)
-    chrome_args = _build_args(stealth_args, args, timezone=timezone_id, locale=locale)
+    timezone, locale = _maybe_resolve_geoip(geoip, proxy, timezone, locale)
+    chrome_args = _build_args(stealth_args, args, timezone=timezone, locale=locale)
 
     logger.debug(
         "Launching persistent stealth Chromium (headless=%s, user_data_dir=%s)",
@@ -242,8 +256,8 @@ def launch_persistent_context(
     context_kwargs["viewport"] = viewport or DEFAULT_VIEWPORT
     if locale:
         context_kwargs["locale"] = locale
-    if timezone_id:
-        context_kwargs["timezone_id"] = timezone_id
+    if timezone:
+        context_kwargs["timezone_id"] = timezone
     if color_scheme:
         context_kwargs["color_scheme"] = color_scheme
     context_kwargs.update(kwargs)
@@ -280,7 +294,7 @@ async def launch_persistent_context_async(
     user_agent: str | None = None,
     viewport: dict | None = None,
     locale: str | None = None,
-    timezone_id: str | None = None,
+    timezone: str | None = None,
     color_scheme: Literal["light", "dark", "no-preference"] | None = None,
     geoip: bool = False,
     **kwargs: Any,
@@ -301,7 +315,7 @@ async def launch_persistent_context_async(
         user_agent: Custom user agent string.
         viewport: Viewport size dict, e.g. {"width": 1920, "height": 1080}.
         locale: Browser locale, e.g. "en-US".
-        timezone_id: Timezone, e.g. "America/New_York".
+        timezone: IANA timezone (e.g. 'America/New_York').
         color_scheme: Color scheme preference — 'light', 'dark', or 'no-preference'.
         geoip: Auto-detect timezone/locale from proxy IP (default False).
         **kwargs: Passed directly to playwright.chromium.launch_persistent_context().
@@ -324,9 +338,11 @@ async def launch_persistent_context_async(
     """
     from patchright.async_api import async_playwright
 
+    timezone = _migrate_timezone_id(timezone, kwargs)
+
     binary_path = ensure_binary()
-    timezone_id, locale = _maybe_resolve_geoip(geoip, proxy, timezone_id, locale)
-    chrome_args = _build_args(stealth_args, args, timezone=timezone_id, locale=locale)
+    timezone, locale = _maybe_resolve_geoip(geoip, proxy, timezone, locale)
+    chrome_args = _build_args(stealth_args, args, timezone=timezone, locale=locale)
 
     logger.debug(
         "Launching persistent stealth Chromium async (headless=%s, user_data_dir=%s)",
@@ -340,8 +356,8 @@ async def launch_persistent_context_async(
     context_kwargs["viewport"] = viewport or DEFAULT_VIEWPORT
     if locale:
         context_kwargs["locale"] = locale
-    if timezone_id:
-        context_kwargs["timezone_id"] = timezone_id
+    if timezone:
+        context_kwargs["timezone_id"] = timezone
     if color_scheme:
         context_kwargs["color_scheme"] = color_scheme
     context_kwargs.update(kwargs)
@@ -377,7 +393,7 @@ def launch_context(
     user_agent: str | None = None,
     viewport: dict | None = None,
     locale: str | None = None,
-    timezone_id: str | None = None,
+    timezone: str | None = None,
     color_scheme: Literal["light", "dark", "no-preference"] | None = None,
     geoip: bool = False,
     **kwargs: Any,
@@ -395,7 +411,7 @@ def launch_context(
         user_agent: Custom user agent string.
         viewport: Viewport size dict, e.g. {"width": 1920, "height": 1080}.
         locale: Browser locale, e.g. "en-US".
-        timezone_id: Timezone, e.g. "America/New_York".
+        timezone: IANA timezone (e.g. 'America/New_York').
         color_scheme: Color scheme preference — 'light', 'dark', or 'no-preference'.
             Default: None (uses Chromium default, which is 'light').
             Note: 'no-preference' doesn't work in Patchright (falls back to 'light').
@@ -405,9 +421,11 @@ def launch_context(
     Returns:
         Playwright BrowserContext object.
     """
+    timezone = _migrate_timezone_id(timezone, kwargs)
+
     # Resolve geoip BEFORE launch() to avoid double-resolution and ensure
     # resolved values flow to both binary flags AND context params
-    timezone_id, locale = _maybe_resolve_geoip(geoip, proxy, timezone_id, locale)
+    timezone, locale = _maybe_resolve_geoip(geoip, proxy, timezone, locale)
     # Skip --fingerprint-timezone binary flag: it only applies to the default
     # context and interferes with Playwright's timezone_id on new contexts.
     # Timezone is set via browser.new_context(timezone_id=...) below instead.
@@ -420,8 +438,8 @@ def launch_context(
     context_kwargs["viewport"] = viewport or DEFAULT_VIEWPORT
     if locale:
         context_kwargs["locale"] = locale
-    if timezone_id:
-        context_kwargs["timezone_id"] = timezone_id
+    if timezone:
+        context_kwargs["timezone_id"] = timezone
     if color_scheme:
         context_kwargs["color_scheme"] = color_scheme
     context_kwargs.update(kwargs)

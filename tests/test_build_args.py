@@ -1,6 +1,8 @@
-"""Unit tests for _build_args timezone/locale injection."""
+"""Unit tests for _build_args timezone/locale injection and deprecation compat."""
 
-from cloakbrowser.browser import _build_args
+import warnings
+
+from cloakbrowser.browser import _build_args, _migrate_timezone_id
 
 
 def test_timezone_injected():
@@ -44,3 +46,49 @@ def test_extra_args_preserved():
     assert "--disable-gpu" in args
     assert "--fingerprint-timezone=Asia/Tokyo" in args
     assert "--lang=ja-JP" in args
+
+
+# --- _migrate_timezone_id deprecation compat ---
+
+
+def test_migrate_old_param_only():
+    """timezone_id in kwargs should be promoted to timezone."""
+    kwargs = {"timezone_id": "Europe/Paris"}
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = _migrate_timezone_id(None, kwargs)
+    assert result == "Europe/Paris"
+    assert "timezone_id" not in kwargs
+    assert len(w) == 1 and issubclass(w[0].category, FutureWarning)
+
+
+def test_migrate_new_param_wins():
+    """Explicit timezone takes precedence; timezone_id is still popped."""
+    kwargs = {"timezone_id": "Europe/Paris"}
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = _migrate_timezone_id("UTC", kwargs)
+    assert result == "UTC"
+    assert "timezone_id" not in kwargs
+    assert len(w) == 1
+
+
+def test_migrate_no_old_param():
+    """No warning when timezone_id is absent."""
+    kwargs = {"other": "value"}
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = _migrate_timezone_id("UTC", kwargs)
+    assert result == "UTC"
+    assert "other" in kwargs
+    assert len(w) == 0
+
+
+def test_migrate_both_none():
+    """Neither param set — returns None, no warning."""
+    kwargs = {}
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = _migrate_timezone_id(None, kwargs)
+    assert result is None
+    assert len(w) == 0
