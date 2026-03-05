@@ -9,13 +9,14 @@
 
 **Stealth Chromium that passes every bot detection test.**
 
-Drop-in Playwright/Puppeteer replacement. Same API — just swap the import. Scores **0.9 on reCAPTCHA v3**, passes **Cloudflare Turnstile**, and clears **30/30** stealth detection tests.
+Drop-in Playwright/Puppeteer replacement. Same API, same code — just swap the import. **3 lines of code, 30 seconds to unblock.**
 
-- 🔒 **26 source-level C++ patches** — not JS injection, not config flags
-- 🎯 **0.9 reCAPTCHA v3 score** — human-level, server-verified
-- ☁️ **Passes Cloudflare Turnstile**, FingerprintJS, BrowserScan — 30/30 tests
-- 🔄 **Drop-in replacement** — works with both Playwright and Puppeteer
-- 📦 **`npm install cloakbrowser`** — binary auto-downloads, zero config
+- **26 source-level C++ patches** — canvas, WebGL, audio, fonts, GPU, screen, automation signals
+- **0.9 reCAPTCHA v3 score** — human-level, server-verified
+- **Passes Cloudflare Turnstile**, FingerprintJS, BrowserScan — tested against 30+ detection sites
+- **`npm install cloakbrowser`** — binary auto-downloads, auto-updates, zero config
+- **Free and open source** — no subscriptions, no usage limits
+- **Works with any framework** — also tested with Selenium, undetected-chromedriver, browser-use, Crawl4AI, and agent-browser
 
 ## Install
 
@@ -161,6 +162,9 @@ if (newVersion) console.log(`Updated to ${newVersion}`);
 | **BrowserScan** | DETECTED | **NORMAL** (4/4) |
 | **bot.incolumitas.com** | 13 fails | **1 fail** |
 | `navigator.webdriver` | `true` | **`false`** |
+| CDP detection | Detected | **Not detected** |
+| TLS fingerprint | Mismatch | **Identical to Chrome** |
+| | | **Tested against 30+ detection sites** |
 
 ## Configuration
 
@@ -186,12 +190,12 @@ const page = await browser.newPage();
 
 ## Platforms
 
-| Platform | Status |
-|---|---|
-| Linux x86_64 | ✅ Available |
-| macOS arm64 (Apple Silicon) | ✅ Available |
-| macOS x86_64 (Intel) | ✅ Available |
-| Windows x86_64 | ✅ Available |
+| Platform | Chromium | Patches | Status |
+|---|---|---|---|
+| Linux x86_64 | 145 | 26 | ✅ Latest |
+| macOS arm64 (Apple Silicon) | 145 | 26 | ✅ Latest |
+| macOS x86_64 (Intel) | 145 | 26 | ✅ Latest |
+| Windows x86_64 | 145 | 26 | ✅ Latest |
 
 ## Requirements
 
@@ -233,7 +237,24 @@ Other tips for maximizing reCAPTCHA scores:
 - **Spend 15+ seconds on the page** before triggering reCAPTCHA — short visits score lower
 - **Space out requests** — back-to-back `grecaptcha.execute()` calls from the same session get penalized. Wait 30+ seconds between pages with reCAPTCHA
 - **Use a fixed fingerprint seed** (`--fingerprint=12345`) for consistent device identity across sessions
+- **Use `page.type()` instead of `page.fill()`** for form filling — `fill()` sets values directly without keyboard events, which reCAPTCHA's behavioral analysis flags. `type()` with a delay simulates real keystrokes:
+  ```javascript
+  await page.type('#email', 'user@example.com', { delay: 50 });
+  ```
 - **Minimize `page.evaluate()` calls** before the reCAPTCHA check fires — each one sends CDP traffic
+
+**New update broke something? Roll back to the previous version**
+When auto-update downloads a newer binary, the previous version stays in `~/.cloakbrowser/`. Point `CLOAKBROWSER_BINARY_PATH` to the older cached binary:
+```bash
+# Linux
+export CLOAKBROWSER_BINARY_PATH=~/.cloakbrowser/chromium-145.0.7632.109/chrome
+
+# macOS
+export CLOAKBROWSER_BINARY_PATH=~/.cloakbrowser/chromium-145.0.7632.109/Chromium.app/Contents/MacOS/Chromium
+
+# Windows
+set CLOAKBROWSER_BINARY_PATH=%USERPROFILE%\.cloakbrowser\chromium-145.0.7632.109\chrome.exe
+```
 
 ## Links
 

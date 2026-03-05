@@ -13,8 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY pyproject.toml README.md LICENSE ./
+COPY pyproject.toml README.md LICENSE BINARY-LICENSE.md CHANGELOG.md ./
 COPY cloakbrowser/ cloakbrowser/
+COPY examples/ examples/
 
 RUN pip install --no-cache-dir .
 
