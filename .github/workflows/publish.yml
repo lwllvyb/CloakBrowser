@@ -59,6 +59,9 @@ jobs:
     needs: [test, validate-version]
     if: always() && needs.test.result == 'success' && (needs.validate-version.result == 'success' || needs.validate-version.result == 'skipped')
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/cloakbrowser
     permissions:
       id-token: write  # OIDC trusted publishing — no PYPI_TOKEN needed
     steps:
@@ -77,6 +80,9 @@ jobs:
     needs: [test, validate-version]
     if: always() && needs.test.result == 'success' && (needs.validate-version.result == 'success' || needs.validate-version.result == 'skipped')
     runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/cloakbrowser
     permissions:
       id-token: write  # OIDC trusted publishing + provenance — no NPM_TOKEN needed
     steps:
@@ -96,6 +102,9 @@ jobs:
     needs: [test, validate-version]
     if: always() && needs.test.result == 'success' && (needs.validate-version.result == 'success' || needs.validate-version.result == 'skipped')
     runs-on: ubuntu-latest
+    environment:
+      name: docker
+      url: https://hub.docker.com/r/cloakhq/cloakbrowser
     permissions:
       id-token: write      # Cosign keyless signing + attestations
       contents: read

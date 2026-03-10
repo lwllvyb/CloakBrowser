@@ -718,7 +718,9 @@ CloakBrowser works identically local, in Docker, and on VPS. No environment-spec
 
 ## Troubleshooting
 
-**Still getting blocked on aggressive sites (DataDome, Turnstile)?**
+---
+
+### Still getting blocked on aggressive sites (DataDome, Turnstile)?
 
 Some sites detect headless mode even with our C++ patches. Run in **headed mode** with a virtual display:
 
@@ -743,7 +745,9 @@ browser.close()
 
 This runs a real headed browser rendered on a virtual display — no physical monitor needed. Combined with a residential proxy, this passes even the most aggressive detection services. Datacenter IPs are often flagged by IP reputation regardless of browser fingerprint — a residential proxy makes the difference.
 
-**Sites challenge fresh sessions but work after first visit**
+---
+
+### Sites challenge fresh sessions but work after first visit
 
 Some sites challenge first-time visitors with no cookies over HTTP/2. This affects all Chromium browsers, not just CloakBrowser. Use a persistent profile to warm up cookies once, then reuse across sessions:
 
@@ -777,7 +781,10 @@ ctx = await launchPersistentContext({ userDataDir: './profile' });
 
 For stateless/ephemeral use cases, `launch(args=["--disable-http2"])` forces HTTP/1.1 which bypasses the check. Only use this flag for sites that require it — most work fine with HTTP/2.
 
-**Something not working? Make sure you're on the latest version**
+---
+
+### Something not working? Make sure you're on the latest version
+
 Older versions may use outdated stealth args or download an older binary:
 ```bash
 pip install -U cloakbrowser    # Python
@@ -785,13 +792,19 @@ npm install cloakbrowser@latest # JavaScript
 docker pull cloakhq/cloakbrowser:latest  # Docker
 ```
 
-**Binary download fails / timeout**
+---
+
+### Binary download fails / timeout
+
 Set a custom download URL or use a local binary:
 ```bash
 export CLOAKBROWSER_BINARY_PATH=/path/to/your/chrome
 ```
 
-**New update broke something? Roll back to the previous version**
+---
+
+### New update broke something? Roll back to the previous version
+
 Install a specific wrapper version to downgrade both the wrapper and the binary it downloads:
 ```bash
 pip install cloakbrowser==0.3.11              # Python
@@ -800,23 +813,33 @@ docker pull cloakhq/cloakbrowser:0.3.11       # Docker
 ```
 Each wrapper version pins its own binary version, so downgrading the wrapper automatically gets you the matching binary on next launch.
 
-**macOS: "App is damaged" or Gatekeeper blocks launch**
+---
+
+### macOS: "App is damaged" or Gatekeeper blocks launch
+
 The binary is ad-hoc signed. macOS quarantines downloaded files. Run once to clear it:
 ```bash
 xattr -cr ~/.cloakbrowser/chromium-*/Chromium.app
 ```
 
-**"playwright install" vs CloakBrowser binary**
+---
+
+### "playwright install" vs CloakBrowser binary
+
 You do NOT need `playwright install chromium`. CloakBrowser downloads its own binary. You only need Playwright's system deps:
 ```bash
 playwright install-deps chromium
 ```
 
-**macOS: Blocked on some sites that pass on Linux**
+---
+
+### macOS: Blocked on some sites that pass on Linux
 
 The macOS fingerprint profile has known inconsistencies that aggressive bot detection catches. If a site blocks you on macOS but works on Linux, switch to a Windows fingerprint profile by passing `stealth_args=False` and manually setting `--fingerprint-platform=windows` with matching GPU flags (see [Fingerprint Management](#fingerprint-management) for the full flag list).
 
-**Site detects incognito / private browsing mode**
+---
+
+### Site detects incognito / private browsing mode
 
 By default, `launch()` opens an incognito context. Some sites (like BrowserScan) detect this. Use `launch_persistent_context()` instead — it runs with a real user profile, so incognito detection passes:
 
@@ -838,7 +861,9 @@ const ctx = await launchPersistentContext({
 
 This also gives you cookie and localStorage persistence across sessions.
 
-**reCAPTCHA v3 scores are low (0.1–0.3)**
+---
+
+### reCAPTCHA v3 scores are low (0.1–0.3)
 
 Avoid `page.wait_for_timeout()` — it sends CDP protocol commands that reCAPTCHA detects. Use native sleep instead:
 
@@ -908,15 +933,21 @@ A: Yes. Pass `proxy="http://user:pass@host:port"` to `launch()`.
 
 ## Security
 
-All binary releases are GPG-signed and include GitHub artifact attestations for supply chain verification.
+All releases are signed for supply chain verification.
 
 ```bash
-# Verify GPG signature
+# Verify GPG signature (binary release tag)
 gpg --keyserver keyserver.ubuntu.com --recv-keys C60C0DDC9D0DE2DD
 git verify-tag chromium-v145.0.7632.159.4
 
-# Verify binary attestation
+# Verify GitHub binary attestation (Sigstore)
 gh attestation verify cloakbrowser-linux-x64.tar.gz --repo CloakHQ/cloakbrowser
+
+# Verify Docker image signature (Cosign/Sigstore)
+cosign verify \
+  --certificate-identity-regexp "https://github.com/CloakHQ/CloakBrowser/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  cloakhq/cloakbrowser:latest
 ```
 
 ## License
