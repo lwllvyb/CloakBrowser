@@ -6,6 +6,17 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ---
 
+## [0.3.12] — 2026-03-10
+
+- **[binary]** Upgrade Linux build to 145.0.7632.159.4
+- **[binary]** Native locale spoofing — new C++ patch replaces detectable CDP-level locale emulation
+- **[binary]** WebGPU fingerprint hardening — spoof adapter features, limits, device ID, and subgroup sizes for cross-API consistency
+- **[binary]** Restore WebGPU blocklist bypass auto-injection (safe now with full adapter spoofing)
+- **[binary]** Fix WebGL renderer suffix — remove driver version string flagged by BrowserLeaks
+- **[wrapper]** Use binary flags for timezone/locale instead of CDP emulation — eliminates a detection vector
+- **[wrapper]** Support bare proxy format (`user:pass@host:port`) without scheme prefix
+- **[wrapper]** Use ANGLE-wrapped GPU strings in default stealth args for realistic WebGL fingerprint
+
 ## [0.3.11] — 2026-03-08
 
 - **[wrapper]** `humanize=True` — human-like mouse (Bézier curves, overshoot), keyboard (per-character timing, thinking pauses), scroll (accelerate/cruise/decelerate), and click behavior. Two presets: `default` and `careful`. Works in Python and JS. (thanks [@evelaa123](https://github.com/evelaa123))

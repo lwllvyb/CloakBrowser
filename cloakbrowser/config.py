@@ -15,10 +15,10 @@ from ._version import __version__
 # CHROMIUM_VERSION is the latest across all platforms (for display/reference).
 # Use get_chromium_version() for the current platform's actual version.
 # ---------------------------------------------------------------------------
-CHROMIUM_VERSION = "145.0.7632.159.3"
+CHROMIUM_VERSION = "145.0.7632.159.4"
 
 PLATFORM_CHROMIUM_VERSIONS: dict[str, str] = {
-    "linux-x64": "145.0.7632.159.3",
+    "linux-x64": "145.0.7632.159.4",
     "darwin-arm64": "145.0.7632.109.2",
     "darwin-x64": "145.0.7632.109.2",
     "windows-x64": "145.0.7632.109.2",

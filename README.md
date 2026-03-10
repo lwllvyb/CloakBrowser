@@ -36,7 +36,7 @@ Drop-in Playwright/Puppeteer replacement for Python and JavaScript.<br>
 Same API, same code — just swap the import. <strong>3 lines of code, 30 seconds to unblock.</strong>
 </p>
 
-- **31 source-level C++ patches** — canvas, WebGL, audio, fonts, GPU, screen, automation signals, CDP input behavior
+- **32 source-level C++ patches** — canvas, WebGL, audio, fonts, GPU, screen, automation signals, CDP input behavior
 - **`humanize=True`** — human-like mouse curves, keyboard timing, and scroll patterns. One flag, behavioral detection passes
 - **0.9 reCAPTCHA v3 score** — human-level, server-verified
 - **Passes Cloudflare Turnstile**, FingerprintJS, BrowserScan — tested against 30+ detection sites
@@ -110,16 +110,15 @@ page.goto("https://example.com")
 
 > ⭐ **Star** to show support — **[Watch releases](https://github.com/CloakHQ/CloakBrowser/subscription)** to get notified when new builds drop.
 
-## Latest: v0.3.11 (Chromium 145.0.7632.159.2)
+## Latest: v0.3.12 (Chromium 145.0.7632.159.4)
 
 - **`humanize=True`** — one flag makes all mouse, keyboard, and scroll interactions behave like a real user. Bézier curves, per-character typing, realistic scroll patterns. Two presets: `default` and `careful`
 - **CDP input behavior mimicking** — input events sent via CDP now produce the same signals as real user interactions. 5 new source-level patches covering pointer, keyboard, and mouse behavior
-- **`cloakserve` CDP server** — no longer requires socat. Chrome binds directly to `0.0.0.0:9222` via native flag support
-- **31 fingerprint patches** (Linux x64) — 5 new patches since v0.3.10, plus GPU fingerprint accuracy fixes for NVIDIA and Apple Silicon profiles
-- **All 4 platforms** — Linux x64, macOS arm64, macOS x64, and Windows x64 all on Chromium 145
+- **Native locale spoofing** — new C++ patch replaces detectable CDP-level locale emulation
+- **WebGPU fingerprint hardening** — adapter features, limits, and device ID spoofed for cross-API consistency
+- **32 fingerprint patches** (Linux x64) — all 4 platforms on Chromium 145
 - **Stealthy with zero flags** — binary auto-generates a random fingerprint seed at startup. No configuration required
 - **Timezone & locale from proxy IP** — `launch(proxy="...", geoip=True)` auto-detects timezone and locale
-- **Playwright + Puppeteer from one package** — `import from 'cloakbrowser'` or `import from 'cloakbrowser/puppeteer'`. Same binary, your choice of API
 - **Persistent profiles** — `launch_persistent_context()` keeps cookies and localStorage across sessions, bypasses incognito detection
 
 See the full [CHANGELOG.md](CHANGELOG.md) for details.
@@ -204,7 +203,7 @@ CloakBrowser is a thin wrapper (Python + JavaScript) around a custom-built Chrom
 3. **Every launch** → Playwright or Puppeteer starts with our binary + stealth args
 4. **You write code** → standard Playwright/Puppeteer API, nothing new to learn
 
-The binary includes 31 source-level patches covering canvas, WebGL, audio, fonts, GPU, screen properties, hardware reporting, automation signal removal, and CDP input behavior mimicking.
+The binary includes 32 source-level patches covering canvas, WebGL, audio, fonts, GPU, screen properties, hardware reporting, automation signal removal, and CDP input behavior mimicking.
 
 These are compiled into the Chromium binary — not injected via JavaScript, not set via flags.
 
@@ -232,7 +231,7 @@ browser = launch(proxy={"server": "http://proxy:8080", "bypass": ".google.com", 
 # With extra Chrome args
 browser = launch(args=["--disable-gpu"])
 
-# With timezone and locale (sets both binary flags and Playwright context)
+# With timezone and locale (sets binary flags — no detectable CDP emulation)
 browser = launch(timezone="America/New_York", locale="en-US")
 
 # Auto-detect timezone/locale from proxy IP (requires: pip install cloakbrowser[geoip])
@@ -528,6 +527,7 @@ Supported by the binary but **not set by default** — pass via `args` to custom
 | `--fingerprint-platform-version` | Client Hints platform version |
 | `--fingerprint-location` | Geolocation coordinates |
 | `--fingerprint-timezone` | Timezone (e.g. `America/New_York`) |
+| `--fingerprint-locale` | Locale (e.g. `en-US`) |
 | `--fingerprint-taskbar-height` | Override taskbar height (binary defaults: Win=48, Mac=95, Linux=0) |
 | `--fingerprint-fonts-dir` | Path to cross-platform font directory |
 | `--enable-blink-features=FakeShadowRoot` | Access closed shadow DOM elements |
@@ -792,17 +792,13 @@ export CLOAKBROWSER_BINARY_PATH=/path/to/your/chrome
 ```
 
 **New update broke something? Roll back to the previous version**
-When auto-update downloads a newer binary, the previous version stays in `~/.cloakbrowser/`. Point `CLOAKBROWSER_BINARY_PATH` to the older cached binary:
+Install a specific wrapper version to downgrade both the wrapper and the binary it downloads:
 ```bash
-# Linux
-export CLOAKBROWSER_BINARY_PATH=~/.cloakbrowser/chromium-145.0.7632.159.2/chrome
-
-# macOS
-export CLOAKBROWSER_BINARY_PATH=~/.cloakbrowser/chromium-145.0.7632.109.2/Chromium.app/Contents/MacOS/Chromium
-
-# Windows
-set CLOAKBROWSER_BINARY_PATH=%USERPROFILE%\.cloakbrowser\chromium-145.0.7632.109.2\chrome.exe
+pip install cloakbrowser==0.3.11              # Python
+npm install cloakbrowser@0.3.11               # JavaScript
+docker pull cloakhq/cloakbrowser:0.3.11       # Docker
 ```
+Each wrapper version pins its own binary version, so downgrading the wrapper automatically gets you the matching binary on next launch.
 
 **macOS: "App is damaged" or Gatekeeper blocks launch**
 The binary is ad-hoc signed. macOS quarantines downloaded files. Run once to clear it:
@@ -917,7 +913,7 @@ All binary releases are GPG-signed and include GitHub artifact attestations for 
 ```bash
 # Verify GPG signature
 gpg --keyserver keyserver.ubuntu.com --recv-keys C60C0DDC9D0DE2DD
-git verify-tag chromium-v145.0.7632.159.3
+git verify-tag chromium-v145.0.7632.159.4
 
 # Verify binary attestation
 gh attestation verify cloakbrowser-linux-x64.tar.gz --repo CloakHQ/cloakbrowser
