@@ -31,6 +31,7 @@ export const CHROMIUM_VERSION = "145.0.7632.159.7";
 
 export const PLATFORM_CHROMIUM_VERSIONS: Record<string, string> = {
   "linux-x64": "145.0.7632.159.7",
+  "linux-arm64": "145.0.7632.159.7",
   "darwin-arm64": "145.0.7632.109.2",
   "darwin-x64": "145.0.7632.109.2",
   "windows-x64": "145.0.7632.109.2",

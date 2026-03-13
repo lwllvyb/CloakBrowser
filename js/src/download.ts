@@ -151,6 +151,7 @@ function showWelcome(): void {
   console.log("  https://github.com/CloakHQ/CloakBrowser");
   console.log();
   console.log("  Issues?  https://github.com/CloakHQ/CloakBrowser/issues");
+  console.log("  Donate?  https://ko-fi.com/cloakhq");
   console.log("  Star us if CloakBrowser helps your project!");
   console.log();
   try {

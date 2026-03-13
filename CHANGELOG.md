@@ -6,6 +6,11 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ---
 
+## [0.3.16] — 2026-03-14
+
+- **[binary]** Linux arm64 build available — Raspberry Pi, AWS Graviton, Oracle Ampere now supported
+- **[wrapper]** Add donate link to first-launch welcome banner
+
 ## [0.3.15] — 2026-03-13
 
 - **[binary]** Upgrade Linux build to 145.0.7632.159.7 — 33 source-level C++ patches

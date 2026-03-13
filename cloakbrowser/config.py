@@ -19,6 +19,7 @@ CHROMIUM_VERSION = "145.0.7632.159.7"
 
 PLATFORM_CHROMIUM_VERSIONS: dict[str, str] = {
     "linux-x64": "145.0.7632.159.7",
+    "linux-arm64": "145.0.7632.159.7",
     "darwin-arm64": "145.0.7632.109.2",
     "darwin-x64": "145.0.7632.109.2",
     "windows-x64": "145.0.7632.109.2",

@@ -60,6 +60,7 @@ def _show_welcome() -> None:
     print("  https://github.com/CloakHQ/CloakBrowser")
     print()
     print("  Issues?  https://github.com/CloakHQ/CloakBrowser/issues")
+    print("  Donate?  https://ko-fi.com/cloakhq")
     print("  Star us if CloakBrowser helps your project!")
     print()
     try:
