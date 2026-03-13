@@ -14,6 +14,10 @@
 <a href="https://hub.docker.com/r/cloakhq/cloakbrowser"><img src="https://img.shields.io/docker/pulls/cloakhq/cloakbrowser?label=docker&logo=docker&logoColor=white" alt="Docker Pulls"></a>
 </p>
 
+<p align="center">
+<a href="https://ko-fi.com/cloakhq"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi"></a>
+</p>
+
 <br>
 
 <h3 align="center">Stealth Chromium that passes every bot detection test.</h3>
@@ -36,7 +40,7 @@ Drop-in Playwright/Puppeteer replacement for Python and JavaScript.<br>
 Same API, same code — just swap the import. <strong>3 lines of code, 30 seconds to unblock.</strong>
 </p>
 
-- **32 source-level C++ patches** — canvas, WebGL, audio, fonts, GPU, screen, automation signals, CDP input behavior
+- **33 source-level C++ patches** — canvas, WebGL, audio, fonts, GPU, screen, automation signals, CDP input behavior
 - **`humanize=True`** — human-like mouse curves, keyboard timing, and scroll patterns. One flag, behavioral detection passes
 - **0.9 reCAPTCHA v3 score** — human-level, server-verified
 - **Passes Cloudflare Turnstile**, FingerprintJS, BrowserScan — tested against 30+ detection sites
@@ -124,13 +128,13 @@ Open [http://localhost:8080](http://localhost:8080). Create a profile. Click **L
 
 ---
 
-## Latest: v0.3.14 (Chromium 145.0.7632.159.6)
+## Latest: v0.3.15 (Chromium 145.0.7632.159.7)
 
 - **`humanize=True`** — one flag makes all mouse, keyboard, and scroll interactions behave like a real user. Bézier curves, per-character typing, realistic scroll patterns. Two presets: `default` and `careful`
 - **CDP input behavior mimicking** — input events sent via CDP now produce the same signals as real user interactions. 5 new source-level patches covering pointer, keyboard, and mouse behavior
 - **Native locale spoofing** — new C++ patch replaces detectable CDP-level locale emulation
 - **WebGPU fingerprint hardening** — adapter features, limits, and device ID spoofed for cross-API consistency
-- **32 fingerprint patches** (Linux x64) — all 4 platforms on Chromium 145
+- **33 fingerprint patches** (Linux x64) — all 4 platforms on Chromium 145
 - **Stealthy with zero flags** — binary auto-generates a random fingerprint seed at startup. No configuration required
 - **Timezone & locale from proxy IP** — `launch(proxy="...", geoip=True)` auto-detects timezone and locale
 - **Persistent profiles** — `launch_persistent_context()` keeps cookies and localStorage across sessions, bypasses incognito detection
@@ -217,7 +221,7 @@ CloakBrowser is a thin wrapper (Python + JavaScript) around a custom-built Chrom
 3. **Every launch** → Playwright or Puppeteer starts with our binary + stealth args
 4. **You write code** → standard Playwright/Puppeteer API, nothing new to learn
 
-The binary includes 32 source-level patches covering canvas, WebGL, audio, fonts, GPU, screen properties, hardware reporting, automation signal removal, and CDP input behavior mimicking.
+The binary includes 33 source-level patches covering canvas, WebGL, audio, fonts, GPU, screen properties, hardware reporting, automation signal removal, and CDP input behavior mimicking.
 
 These are compiled into the Chromium binary — not injected via JavaScript, not set via flags.
 
@@ -302,7 +306,7 @@ context.close()
 
 ### `launch_persistent_context()`
 
-Same as `launch_context()`, but with a persistent user profile. Cookies, localStorage, and cache persist across sessions. Also avoids incognito detection by services like BrowserScan.
+Same as `launch_context()`, but with a persistent user profile. Cookies, localStorage, and cache persist across sessions.
 
 Use this when you need to:
 - **Stay logged in** across runs (cookies/sessions survive restarts)
@@ -326,6 +330,17 @@ ctx = launch_persistent_context("./my-profile", headless=False)
 Supports all the same options as `launch_context()`: `proxy`, `user_agent`, `viewport`, `locale`, `timezone`, `color_scheme`, `geoip`.
 
 Async version: `launch_persistent_context_async()`.
+
+**Storage quota and detection tradeoff:** By default, the binary normalizes storage quota to pass FingerprintJS, which blocks persistent contexts that report non-incognito quota values. This means detection services that penalize incognito mode (like BrowserScan's `notPrivate` check, -10 points) will still flag it. If your target site penalizes incognito but doesn't use FingerprintJS, set a higher quota to appear as a regular profile:
+
+```python
+ctx = launch_persistent_context("./my-profile", args=["--fingerprint-storage-quota=5000"])
+```
+
+| Quota setting | FingerprintJS | BrowserScan `notPrivate` |
+|---|---|---|
+| Default (auto, ~500MB) | PASS | -10 (flagged as incognito) |
+| `--fingerprint-storage-quota=5000` | May trigger detection | PASS (appears non-incognito) |
 
 ### CLI
 
@@ -553,6 +568,7 @@ Supported by the binary but **not set by default** — pass via `args` to custom
 | `--fingerprint-location` | Geolocation coordinates |
 | `--fingerprint-timezone` | Timezone (e.g. `America/New_York`) |
 | `--fingerprint-locale` | Locale (e.g. `en-US`) |
+| `--fingerprint-storage-quota` | Override storage quota in MB — affects `storage.estimate()`, `storageBuckets`, and legacy webkit APIs. Auto-normalized when `--fingerprint` is set |
 | `--fingerprint-taskbar-height` | Override taskbar height (binary defaults: Win=48, Mac=95, Linux=0) |
 | `--fingerprint-fonts-dir` | Path to cross-platform font directory |
 | `--enable-blink-features=FakeShadowRoot` | Access closed shadow DOM elements |
@@ -875,25 +891,15 @@ The macOS fingerprint profile has known inconsistencies that aggressive bot dete
 
 ### Site detects incognito / private browsing mode
 
-By default, `launch()` opens an incognito context. Some sites (like BrowserScan) detect this. Use `launch_persistent_context()` instead — it runs with a real user profile, so incognito detection passes:
+By default, `launch()` opens an incognito context. Some sites penalize this. Use `launch_persistent_context()` to get a real profile with cookie persistence:
 
 ```python
 from cloakbrowser import launch_persistent_context
 
 ctx = launch_persistent_context("./my-profile", headless=False)
-page = ctx.new_page()
 ```
 
-```javascript
-import { launchPersistentContext } from 'cloakbrowser';
-
-const ctx = await launchPersistentContext({
-  userDataDir: './my-profile',
-  headless: false,
-});
-```
-
-This also gives you cookie and localStorage persistence across sessions.
+If the site still flags incognito, raise the storage quota to appear as a regular browsing session. See the [storage quota tradeoff](#launch_persistent_context) for details on how this affects different detection services.
 
 ---
 
@@ -963,6 +969,7 @@ A: Yes. Pass `proxy="http://user:pass@host:port"` to `launch()`.
 - 🐛 **Bug reports & feature requests** — [GitHub Issues](https://github.com/CloakHQ/CloakBrowser/issues)
 - 📦 **PyPI** — [pypi.org/project/cloakbrowser](https://pypi.org/project/cloakbrowser/)
 - 📦 **npm** — [npmjs.com/package/cloakbrowser](https://www.npmjs.com/package/cloakbrowser)
+- ☕ **Support** — [ko-fi.com/cloakhq](https://ko-fi.com/cloakhq)
 - 📧 **Contact** — cloakhq@pm.me
 
 ## Security
@@ -972,7 +979,7 @@ All releases are signed for supply chain verification.
 ```bash
 # Verify GPG signature (binary release tag)
 gpg --keyserver keyserver.ubuntu.com --recv-keys C60C0DDC9D0DE2DD
-git verify-tag chromium-v145.0.7632.159.6
+git verify-tag chromium-v145.0.7632.159.7
 
 # Verify GitHub binary attestation (Sigstore)
 gh attestation verify cloakbrowser-linux-x64.tar.gz --repo CloakHQ/cloakbrowser

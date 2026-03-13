@@ -6,6 +6,12 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ---
 
+## [0.3.15] — 2026-03-13
+
+- **[binary]** Upgrade Linux build to 145.0.7632.159.7 — 33 source-level C++ patches
+- **[binary]** StorageBuckets API quota normalization — closes the last storage-based incognito detection vector
+- **[wrapper]** Fix non-ASCII character support in humanized typing — Cyrillic, CJK, and emoji now type correctly (thanks [@evelaa123](https://github.com/evelaa123))
+
 ## [0.3.14] — 2026-03-12
 
 - **[binary]** Upgrade Linux build to 145.0.7632.159.6 — fix persistent context detection by FingerprintJS

@@ -1,6 +1,6 @@
 {
   "name": "cloakbrowser",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "description": "Stealth Chromium that passes every bot detection test. Drop-in Playwright/Puppeteer replacement with source-level fingerprint patches.",
   "type": "module",
   "main": "dist/index.js",
