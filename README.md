@@ -40,7 +40,7 @@ Drop-in Playwright/Puppeteer replacement for Python and JavaScript.<br>
 Same API, same code — just swap the import. <strong>3 lines of code, 30 seconds to unblock.</strong>
 </p>
 
-- **33 source-level C++ patches** — canvas, WebGL, audio, fonts, GPU, screen, automation signals, CDP input behavior
+- **42 source-level C++ patches** — canvas, WebGL, audio, fonts, GPU, screen, automation signals, CDP input behavior
 - **`humanize=True`** — human-like mouse curves, keyboard timing, and scroll patterns. One flag, behavioral detection passes
 - **0.9 reCAPTCHA v3 score** — human-level, server-verified
 - **Passes Cloudflare Turnstile**, FingerprintJS, BrowserScan — tested against 30+ detection sites
@@ -128,13 +128,13 @@ Open [http://localhost:8080](http://localhost:8080). Create a profile. Click **L
 
 ---
 
-## Latest: v0.3.17 (Chromium 145.0.7632.159.7)
+## Latest: v0.3.19 (Chromium 145.0.7632.159.8)
 
 - **`humanize=True`** — one flag makes all mouse, keyboard, and scroll interactions behave like a real user. Bézier curves, per-character typing, realistic scroll patterns. Two presets: `default` and `careful`
-- **CDP input behavior mimicking** — input events sent via CDP now produce the same signals as real user interactions. 5 new source-level patches covering pointer, keyboard, and mouse behavior
+- **CDP input behavior mimicking** — input events sent via CDP now produce the same signals as real user interactions. 4 source-level patches covering pointer, keyboard, and mouse behavior
 - **Native locale spoofing** — new C++ patch replaces detectable CDP-level locale emulation
 - **WebGPU fingerprint hardening** — adapter features, limits, and device ID spoofed for cross-API consistency
-- **33 fingerprint patches** (Linux x64) — all 4 platforms on Chromium 145
+- **42 fingerprint patches** (Linux x64) — all 4 platforms on Chromium 145
 - **Stealthy with zero flags** — binary auto-generates a random fingerprint seed at startup. No configuration required
 - **Timezone & locale from proxy IP** — `launch(proxy="...", geoip=True)` auto-detects timezone and locale
 - **Persistent profiles** — `launch_persistent_context()` keeps cookies and localStorage across sessions, bypasses incognito detection
@@ -221,7 +221,7 @@ CloakBrowser is a thin wrapper (Python + JavaScript) around a custom-built Chrom
 3. **Every launch** → Playwright or Puppeteer starts with our binary + stealth args
 4. **You write code** → standard Playwright/Puppeteer API, nothing new to learn
 
-The binary includes 33 source-level patches covering canvas, WebGL, audio, fonts, GPU, screen properties, hardware reporting, automation signal removal, and CDP input behavior mimicking.
+The binary includes 42 source-level patches covering canvas, WebGL, audio, fonts, GPU, screen properties, hardware reporting, automation signal removal, and CDP input behavior mimicking.
 
 These are compiled into the Chromium binary — not injected via JavaScript, not set via flags.
 
@@ -573,6 +573,7 @@ Supported by the binary but **not set by default** — pass via `args` to custom
 | `--fingerprint-storage-quota` | Override storage quota in MB — affects `storage.estimate()`, `storageBuckets`, and legacy webkit APIs. Auto-normalized when `--fingerprint` is set |
 | `--fingerprint-taskbar-height` | Override taskbar height (binary defaults: Win=48, Mac=95, Linux=0) |
 | `--fingerprint-fonts-dir` | Path to cross-platform font directory |
+| `--fingerprint-noise=false` | Disable noise injection (canvas, WebGL, audio, client rects) while keeping the deterministic fingerprint seed active |
 | `--enable-blink-features=FakeShadowRoot` | Access closed shadow DOM elements |
 
 > **Note:** All stealth tests were verified with the default fingerprint config above. Changing these flags may affect detection results — test your configuration before using in production.
@@ -645,11 +646,11 @@ browser = await launch_async(args=["--remote-debugging-port=9242"])
 
 | Platform | Chromium | Patches | Status |
 |---|---|---|---|
-| Linux x86_64 | 145 | 33 | ✅ Latest |
-| Linux arm64 (RPi, Graviton) | 145 | 33 | ✅ Latest |
-| macOS arm64 (Apple Silicon) | 145 | 26 | ✅ Latest |
-| macOS x86_64 (Intel) | 145 | 26 | ✅ Latest |
-| Windows x86_64 | 145 | 33 | ✅ Latest |
+| Linux x86_64 | 145 | 42 | ✅ Latest |
+| Linux arm64 (RPi, Graviton) | 145 | 33 | ✅ |
+| macOS arm64 (Apple Silicon) | 145 | 26 | ✅ |
+| macOS x86_64 (Intel) | 145 | 26 | ✅ |
+| Windows x86_64 | 145 | 33 | ✅ |
 
 The wrapper auto-downloads the correct binary for your platform.
 
@@ -987,9 +988,9 @@ A: Yes. Pass `proxy="http://user:pass@host:port"` to `launch()`.
 
 | Feature | Status |
 |---------|--------|
-| Linux x64 — Chromium 145 (26 patches) | ✅ Released |
+| Linux x64 — Chromium 145 (42 patches) | ✅ Released |
 | macOS arm64/x64 — Chromium 145 (26 patches) | ✅ Released |
-| Windows x64 — Chromium 145 (26 patches) | ✅ Released |
+| Windows x64 — Chromium 145 (33 patches) | ✅ Released |
 | JavaScript/Puppeteer + Playwright support | ✅ Released |
 | Fingerprint rotation per session | ✅ Released |
 | Built-in proxy rotation | 📋 Planned |
@@ -1011,7 +1012,7 @@ All releases are signed for supply chain verification.
 ```bash
 # Verify GPG signature (binary release tag)
 gpg --keyserver keyserver.ubuntu.com --recv-keys C60C0DDC9D0DE2DD
-git verify-tag chromium-v145.0.7632.159.7
+git verify-tag chromium-v145.0.7632.159.8
 
 # Verify GitHub binary attestation (Sigstore)
 gh attestation verify cloakbrowser-linux-x64.tar.gz --repo CloakHQ/cloakbrowser
