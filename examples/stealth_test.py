@@ -228,7 +228,7 @@ def main():
     print()
     print("Launching stealth browser...", flush=True)
 
-    browser = launch(headless=not HEADED, proxy=PROXY)
+    browser = launch(headless=not HEADED, proxy=PROXY, geoip=True)
     page = browser.new_page()
 
     # Show browser fingerprint details
