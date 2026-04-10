@@ -96,7 +96,7 @@ def resolve_proxy_geo_with_ip(
             )
             return timezone, locale, ip
     except Exception as exc:
-        logger.debug("GeoIP lookup failed for %s: %s", ip, exc)
+        logger.warning("GeoIP lookup failed for %s: %s", ip, exc)
         return None, None, ip
 
 
@@ -132,7 +132,7 @@ def _resolve_proxy_ip(proxy_url: str) -> str | None:
             return ip
         return None
     except Exception as exc:
-        logger.debug("Failed to resolve proxy hostname: %s", exc)
+        logger.warning("Failed to resolve proxy hostname: %s", exc)
         return None
 
 
@@ -165,9 +165,14 @@ def _resolve_exit_ip(proxy_url: str) -> str | None:
             ipaddress.ip_address(ip)
             logger.debug("Exit IP via %s: %s", url, ip)
             return ip
+        except httpx.UnsupportedProtocol:
+            logger.warning(
+                "SOCKS5 proxy requires socksio: pip install cloakbrowser[geoip]"
+            )
+            return None
         except Exception:
             continue
-    logger.debug("Failed to discover exit IP through proxy")
+    logger.warning("Failed to discover exit IP through proxy")
     return None
 
 

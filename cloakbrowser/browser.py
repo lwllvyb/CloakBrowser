@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import os
 from typing import Any, Literal, TypedDict
-from urllib.parse import unquote, urlparse, urlunparse
+from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from .config import DEFAULT_VIEWPORT, IGNORE_DEFAULT_ARGS, get_default_stealth_args
 from .download import ensure_binary
@@ -105,11 +105,12 @@ def launch(
 
     binary_path = ensure_binary()
     timezone, locale, exit_ip = maybe_resolve_geoip(geoip, proxy, timezone, locale)
+    proxy_kwargs, proxy_extra_args = _resolve_proxy_config(proxy)
     args = _resolve_webrtc_args(args, proxy)
     if exit_ip and not (args and any(a.startswith("--fingerprint-webrtc-ip") for a in args)):
         args = list(args or [])
         args.append(f"--fingerprint-webrtc-ip={exit_ip}")
-    chrome_args = build_args(stealth_args, args, timezone=timezone, locale=locale, headless=headless)
+    chrome_args = build_args(stealth_args, (args or []) + proxy_extra_args, timezone=timezone, locale=locale, headless=headless)
 
     logger.debug("Launching stealth Chromium (headless=%s, args=%d)", headless, len(chrome_args))
 
@@ -119,7 +120,7 @@ def launch(
         headless=headless,
         args=chrome_args,
         ignore_default_args=IGNORE_DEFAULT_ARGS,
-        **_build_proxy_kwargs(proxy),
+        **proxy_kwargs,
         **kwargs,
     )
 
@@ -194,11 +195,12 @@ async def launch_async(  # noqa: C901
 
     binary_path = ensure_binary()
     timezone, locale, exit_ip = maybe_resolve_geoip(geoip, proxy, timezone, locale)
+    proxy_kwargs, proxy_extra_args = _resolve_proxy_config(proxy)
     args = _resolve_webrtc_args(args, proxy)
     if exit_ip and not (args and any(a.startswith("--fingerprint-webrtc-ip") for a in args)):
         args = list(args or [])
         args.append(f"--fingerprint-webrtc-ip={exit_ip}")
-    chrome_args = build_args(stealth_args, args, timezone=timezone, locale=locale, headless=headless)
+    chrome_args = build_args(stealth_args, (args or []) + proxy_extra_args, timezone=timezone, locale=locale, headless=headless)
 
     logger.debug("Launching stealth Chromium async (headless=%s, args=%d)", headless, len(chrome_args))
 
@@ -208,7 +210,7 @@ async def launch_async(  # noqa: C901
         headless=headless,
         args=chrome_args,
         ignore_default_args=IGNORE_DEFAULT_ARGS,
-        **_build_proxy_kwargs(proxy),
+        **proxy_kwargs,
         **kwargs,
     )
 
@@ -297,11 +299,12 @@ def launch_persistent_context(
 
     binary_path = ensure_binary()
     timezone, locale, exit_ip = maybe_resolve_geoip(geoip, proxy, timezone, locale)
+    proxy_kwargs, proxy_extra_args = _resolve_proxy_config(proxy)
     args = _resolve_webrtc_args(args, proxy)
     if exit_ip and not (args and any(a.startswith("--fingerprint-webrtc-ip") for a in args)):
         args = list(args or [])
         args.append(f"--fingerprint-webrtc-ip={exit_ip}")
-    chrome_args = build_args(stealth_args, args, timezone=timezone, locale=locale, headless=headless)
+    chrome_args = build_args(stealth_args, (args or []) + proxy_extra_args, timezone=timezone, locale=locale, headless=headless)
 
     logger.debug(
         "Launching persistent stealth Chromium (headless=%s, user_data_dir=%s)",
@@ -331,7 +334,7 @@ def launch_persistent_context(
         headless=headless,
         args=chrome_args,
         ignore_default_args=IGNORE_DEFAULT_ARGS,
-        **_build_proxy_kwargs(proxy),
+        **proxy_kwargs,
         **context_kwargs,
     )
 
@@ -422,11 +425,12 @@ async def launch_persistent_context_async(
 
     binary_path = ensure_binary()
     timezone, locale, exit_ip = maybe_resolve_geoip(geoip, proxy, timezone, locale)
+    proxy_kwargs, proxy_extra_args = _resolve_proxy_config(proxy)
     args = _resolve_webrtc_args(args, proxy)
     if exit_ip and not (args and any(a.startswith("--fingerprint-webrtc-ip") for a in args)):
         args = list(args or [])
         args.append(f"--fingerprint-webrtc-ip={exit_ip}")
-    chrome_args = build_args(stealth_args, args, timezone=timezone, locale=locale, headless=headless)
+    chrome_args = build_args(stealth_args, (args or []) + proxy_extra_args, timezone=timezone, locale=locale, headless=headless)
 
     logger.debug(
         "Launching persistent stealth Chromium async (headless=%s, user_data_dir=%s)",
@@ -456,7 +460,7 @@ async def launch_persistent_context_async(
         headless=headless,
         args=chrome_args,
         ignore_default_args=IGNORE_DEFAULT_ARGS,
-        **_build_proxy_kwargs(proxy),
+        **proxy_kwargs,
         **context_kwargs,
     )
 
@@ -631,14 +635,42 @@ def _ensure_proxy_scheme(proxy_url: str) -> str:
     return proxy_url if "://" in proxy_url else f"http://{proxy_url}"
 
 
+def _reconstruct_socks_url(proxy: ProxySettings) -> str:
+    """Reconstruct a SOCKS5 URL with inline credentials from a Playwright proxy dict."""
+    server = proxy.get("server", "")
+    username = proxy.get("username", "")
+    password = proxy.get("password", "")
+    if not username:
+        return server
+    parsed = urlparse(server)
+    creds = quote(username, safe="")
+    if password:
+        creds += f":{quote(password, safe='')}"
+    host = parsed.hostname or ""
+    if ":" in host:  # IPv6 literal — re-add brackets
+        host = f"[{host}]"
+    netloc = f"{creds}@{host}"
+    if parsed.port:
+        netloc += f":{parsed.port}"
+    return urlunparse((parsed.scheme, netloc, parsed.path, "", "", ""))
+
+
 def _extract_proxy_url(proxy: str | ProxySettings | None) -> str | None:
-    """Extract and normalize proxy URL string from proxy param."""
+    """Extract and normalize proxy URL string from proxy param.
+
+    For SOCKS5 dicts with separate username/password fields, reconstructs
+    the full URL with inline credentials so SOCKS5 auth works.
+    """
     if proxy is None:
         return None
-    raw = proxy.get("server") if isinstance(proxy, dict) else proxy
-    if not raw:
-        return None
-    return _ensure_proxy_scheme(raw)
+    if isinstance(proxy, dict):
+        server = proxy.get("server", "")
+        if not server:
+            return None
+        if _is_socks_proxy(proxy):
+            return _reconstruct_socks_url(proxy)
+        return _ensure_proxy_scheme(server)
+    return _ensure_proxy_scheme(proxy)
 
 
 def maybe_resolve_geoip(
@@ -694,7 +726,7 @@ def _resolve_webrtc_args(
         return args
     proxy_url = _extract_proxy_url(proxy)
     if not proxy_url:
-        logger.debug("--fingerprint-webrtc-ip=auto but no proxy set — removing flag")
+        logger.warning("--fingerprint-webrtc-ip=auto requires a proxy; removing flag")
         args = list(args)
         del args[idx]
         return args
@@ -702,7 +734,7 @@ def _resolve_webrtc_args(
         from .geoip import _resolve_exit_ip
         exit_ip = _resolve_exit_ip(proxy_url)
     except Exception:
-        logger.debug("WebRTC IP resolution failed — removing flag")
+        logger.warning("Failed to resolve proxy exit IP for WebRTC spoofing; removing --fingerprint-webrtc-ip=auto")
         args = list(args)
         del args[idx]
         return args
@@ -710,6 +742,7 @@ def _resolve_webrtc_args(
         args = list(args)
         args[idx] = f"--fingerprint-webrtc-ip={exit_ip}"
     else:
+        logger.warning("Could not resolve proxy exit IP for WebRTC spoofing; removing --fingerprint-webrtc-ip=auto")
         args = list(args)
         del args[idx]
     return args
@@ -799,10 +832,41 @@ def _parse_proxy_url(proxy: str) -> dict[str, Any]:
     return result
 
 
-def _build_proxy_kwargs(proxy: str | ProxySettings | None) -> dict[str, Any]:
-    """Build proxy kwargs for Playwright launch."""
+def _is_socks_proxy(proxy: str | ProxySettings | None) -> bool:
+    """Check if the proxy uses SOCKS5 protocol."""
     if proxy is None:
-        return {}
+        return False
+    url = proxy.get("server", "") if isinstance(proxy, dict) else proxy
+    return url.lower().startswith(("socks5://", "socks5h://"))
+
+
+def _resolve_proxy_config(
+    proxy: str | ProxySettings | None,
+) -> tuple[dict[str, Any], list[str]]:
+    """Resolve proxy into Playwright kwargs and Chrome args.
+
+    Playwright rejects SOCKS5 proxies with credentials in its proxy dict,
+    so SOCKS5 is passed via --proxy-server Chrome arg instead.
+
+    Returns:
+        (proxy_kwargs, extra_chrome_args) — one or both will be empty.
+    """
+    if proxy is None:
+        return {}, []
+
+    if _is_socks_proxy(proxy):
+        # SOCKS5: bypass Playwright, pass directly to Chrome via --proxy-server.
+        # Chrome handles SOCKS5 auth natively from the URL.
+        if isinstance(proxy, dict):
+            url = _reconstruct_socks_url(proxy)
+            extra_args = [f"--proxy-server={url}"]
+            if proxy.get("bypass"):
+                extra_args.append(f"--proxy-bypass-list={proxy['bypass']}")
+            return {}, extra_args
+        # String URL — pass as-is (Chrome handles user:pass@ in the URL)
+        return {}, [f"--proxy-server={proxy}"]
+
+    # HTTP/HTTPS: use Playwright's proxy dict as before
     if isinstance(proxy, dict):
-        return {"proxy": proxy}
-    return {"proxy": _parse_proxy_url(proxy)}
+        return {"proxy": proxy}, []
+    return {"proxy": _parse_proxy_url(proxy)}, []

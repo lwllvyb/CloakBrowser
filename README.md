@@ -242,8 +242,9 @@ browser = launch()
 # Headed mode (see the browser window)
 browser = launch(headless=False)
 
-# With proxy
+# With proxy (HTTP or SOCKS5)
 browser = launch(proxy="http://user:pass@proxy:8080")
+browser = launch(proxy="socks5://user:pass@proxy:1080")
 
 # With proxy dict (bypass, separate auth fields)
 browser = launch(proxy={"server": "http://proxy:8080", "bypass": ".google.com", "username": "user", "password": "pass"})
@@ -1028,7 +1029,7 @@ A: Camoufox patches Firefox. We patch Chromium. Chromium means native Playwright
 A: Possibly. Bot detection is an arms race. Source-level patches are harder to detect than config-level patches, but not impossible. We actively monitor and update when detection evolves.
 
 **Q: Can I use my own proxy?**
-A: Yes. Pass `proxy="http://user:pass@host:port"` to `launch()`.
+A: Yes. Pass `proxy="http://user:pass@host:port"` or `proxy="socks5://user:pass@host:port"` to `launch()`. Both HTTP and SOCKS5 proxies are supported natively.
 
 ## Roadmap
 

@@ -8,7 +8,7 @@ import type { LaunchOptions, LaunchContextOptions, LaunchPersistentContextOption
 import { DEFAULT_VIEWPORT, IGNORE_DEFAULT_ARGS } from "./config.js";
 import { buildArgs } from "./args.js";
 import { ensureBinary } from "./download.js";
-import { parseProxyUrl } from "./proxy.js";
+import { resolveProxyConfig } from "./proxy.js";
 import { maybeResolveGeoip, resolveWebrtcArgs } from "./geoip.js";
 
 /** @internal Accept both timezone and timezoneId — either works, no warning. Exported for testing. */
@@ -39,20 +39,19 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
 
   const binaryPath = process.env.CLOAKBROWSER_BINARY_PATH || (await ensureBinary());
   const { exitIp, ...resolved } = await maybeResolveGeoip(options);
+  const { proxyOption, proxyArgs } = resolveProxyConfig(options.proxy);
   let resolvedArgs = await resolveWebrtcArgs(options);
   if (exitIp && !(resolvedArgs ?? []).some(a => a.startsWith("--fingerprint-webrtc-ip"))) {
     resolvedArgs = [...(resolvedArgs ?? []), `--fingerprint-webrtc-ip=${exitIp}`];
   }
-  const args = buildArgs({ ...options, ...resolved, args: resolvedArgs });
+  const args = buildArgs({ ...options, ...resolved, args: [...(resolvedArgs ?? []), ...proxyArgs] });
 
   const browser = await chromium.launch({
     executablePath: binaryPath,
     headless: options.headless ?? true,
     args,
     ignoreDefaultArgs: IGNORE_DEFAULT_ARGS,
-    ...(options.proxy
-      ? { proxy: typeof options.proxy === "string" ? parseProxyUrl(options.proxy) : options.proxy }
-      : {}),
+    ...(proxyOption ? { proxy: proxyOption } : {}),
     ...options.launchOptions,
   });
 
@@ -164,11 +163,12 @@ export async function launchPersistentContext(
 
   const binaryPath = process.env.CLOAKBROWSER_BINARY_PATH || (await ensureBinary());
   const { exitIp, ...resolved } = await maybeResolveGeoip(options);
+  const { proxyOption, proxyArgs } = resolveProxyConfig(options.proxy);
   let resolvedArgs = await resolveWebrtcArgs(options);
   if (exitIp && !(resolvedArgs ?? []).some(a => a.startsWith("--fingerprint-webrtc-ip"))) {
     resolvedArgs = [...(resolvedArgs ?? []), `--fingerprint-webrtc-ip=${exitIp}`];
   }
-  const args = buildArgs({ ...options, ...resolved, args: resolvedArgs });
+  const args = buildArgs({ ...options, ...resolved, args: [...(resolvedArgs ?? []), ...proxyArgs] });
 
   // locale and timezone are set via binary flags (--lang, --fingerprint-timezone)
   // — NOT via Playwright context kwargs which use detectable CDP emulation.
@@ -177,9 +177,7 @@ export async function launchPersistentContext(
     headless: options.headless ?? true,
     args,
     ignoreDefaultArgs: IGNORE_DEFAULT_ARGS,
-    ...(options.proxy
-      ? { proxy: typeof options.proxy === "string" ? parseProxyUrl(options.proxy) : options.proxy }
-      : {}),
+    ...(proxyOption ? { proxy: proxyOption } : {}),
     ...(options.userAgent ? { userAgent: options.userAgent } : {}),
     viewport: options.viewport === undefined ? DEFAULT_VIEWPORT : options.viewport,
     ...(options.colorScheme ? { colorScheme: options.colorScheme } : {}),

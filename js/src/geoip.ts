@@ -15,7 +15,7 @@ import dns from "node:dns/promises";
 import net from "node:net";
 import { getCacheDir } from "./config.js";
 import type { LaunchOptions } from "./types.js";
-import { ensureProxyScheme } from "./proxy.js";
+import { ensureProxyScheme, isSocksProxy, reconstructSocksUrl, type ProxyDict } from "./proxy.js";
 
 // P3TERX mirror of MaxMind GeoLite2-City — no license key needed
 const GEOIP_DB_URL =
@@ -129,9 +129,44 @@ const IP_ECHO_URLS = [
 ];
 
 async function resolveExitIp(proxyUrl: string): Promise<string | null> {
-  // Node.js fetch doesn't support proxy natively — use a CONNECT tunnel via http
-  // For simplicity, use a direct HTTP request to a plain-text IP echo service
-  // through the proxy using Node's http module
+  const isSocks = isSocksProxy(proxyUrl);
+
+  // SOCKS5: tunnel through the SOCKS5 proxy via socks-proxy-agent
+  if (isSocks) {
+    let SocksProxyAgent: typeof import("socks-proxy-agent").SocksProxyAgent;
+    try {
+      ({ SocksProxyAgent } = await import("socks-proxy-agent"));
+    } catch {
+      console.warn("[cloakbrowser] socks-proxy-agent not installed — cannot resolve exit IP through SOCKS5 proxy. Install it: npm install socks-proxy-agent");
+      return null;
+    }
+    const { default: https } = await import("node:https");
+    const agent = new SocksProxyAgent(proxyUrl);
+
+    for (const echoUrl of IP_ECHO_URLS) {
+      try {
+        const ip = await new Promise<string | null>((resolve) => {
+          const req = https.request(echoUrl, { agent, timeout: 10_000 }, (res) => {
+            let data = "";
+            res.on("data", (chunk: Buffer) => (data += chunk.toString()));
+            res.on("end", () => {
+              const ip = data.trim();
+              resolve(net.isIP(ip) ? ip : null);
+            });
+          });
+          req.on("error", () => resolve(null));
+          req.on("timeout", () => { req.destroy(); resolve(null); });
+          req.end();
+        });
+        if (ip) return ip;
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  // HTTP/HTTPS: use a CONNECT tunnel via http
   try {
     const { default: http } = await import("node:http");
     const { default: https } = await import("node:https");
@@ -265,6 +300,22 @@ function maybeTriggerUpdate(dbPath: string): void {
 }
 
 /**
+ * Extract a usable proxy URL from LaunchOptions.proxy.
+ * For SOCKS5 dicts with separate credentials, reconstructs the full URL
+ * with inline credentials so SOCKS5 auth works.
+ */
+function extractProxyUrl(proxy: string | ProxyDict | undefined): string | null {
+  if (!proxy) return null;
+  if (typeof proxy === "string") return ensureProxyScheme(proxy);
+  const p = proxy as ProxyDict;
+  if (!p.server) return null;
+  if (p.username && isSocksProxy(p)) {
+    return reconstructSocksUrl(p);
+  }
+  return ensureProxyScheme(p.server);
+}
+
+/**
  * Auto-fill timezone/locale from proxy IP when geoip is enabled.
  * Also returns exitIp as a free bonus (reused for WebRTC spoofing).
  */
@@ -273,9 +324,8 @@ export async function maybeResolveGeoip(
 ): Promise<{ timezone?: string; locale?: string; exitIp?: string }> {
   if (!options.geoip || !options.proxy) return { timezone: options.timezone, locale: options.locale };
 
-  let proxyUrl = typeof options.proxy === "string" ? options.proxy : options.proxy.server;
+  const proxyUrl = extractProxyUrl(options.proxy);
   if (!proxyUrl) return { timezone: options.timezone, locale: options.locale };
-  proxyUrl = ensureProxyScheme(proxyUrl);
 
   // When both tz/locale are explicit, still resolve exit IP for WebRTC
   if (options.timezone && options.locale) {
@@ -304,13 +354,13 @@ export async function resolveWebrtcArgs(
   const idx = args.findIndex(a => a === "--fingerprint-webrtc-ip=auto");
   if (idx === -1) return args;
 
-  let proxyUrl = typeof options.proxy === "string" ? options.proxy : options.proxy?.server;
+  const proxyUrl = extractProxyUrl(options.proxy);
   if (!proxyUrl) {
+    console.warn("[cloakbrowser] --fingerprint-webrtc-ip=auto requires a proxy; removing flag");
     const result = [...args];
     result.splice(idx, 1);
     return result;
   }
-  proxyUrl = ensureProxyScheme(proxyUrl);
 
   try {
     const ip = await resolveExitIp(proxyUrl);
@@ -318,10 +368,12 @@ export async function resolveWebrtcArgs(
     if (ip) {
       result[idx] = `--fingerprint-webrtc-ip=${ip}`;
     } else {
+      console.warn("[cloakbrowser] Could not resolve proxy exit IP for WebRTC spoofing; removing --fingerprint-webrtc-ip=auto");
       result.splice(idx, 1);
     }
     return result;
   } catch {
+    console.warn("[cloakbrowser] Failed to resolve proxy exit IP for WebRTC spoofing; removing --fingerprint-webrtc-ip=auto");
     const result = [...args];
     result.splice(idx, 1);
     return result;

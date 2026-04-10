@@ -54,7 +54,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-geoip = ["geoip2>=4.0"]
+geoip = ["geoip2>=4.0", "socksio>=1.0"]  # socksio: SOCKS5 transport for httpx
 patchright = ["patchright>=1.40"]
 serve = ["aiohttp>=3.9", "websockets>=12.0"]
 dev = ["pytest>=7.0", "pytest-asyncio>=0.23"]

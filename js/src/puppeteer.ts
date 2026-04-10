@@ -9,7 +9,7 @@ import type { LaunchOptions } from "./types.js";
 import { IGNORE_DEFAULT_ARGS } from "./config.js";
 import { buildArgs } from "./args.js";
 import { ensureBinary } from "./download.js";
-import { parseProxyUrl } from "./proxy.js";
+import { isSocksProxy, parseProxyUrl, resolveProxyConfig } from "./proxy.js";
 import { maybeResolveGeoip, resolveWebrtcArgs } from "./geoip.js";
 
 /**
@@ -39,25 +39,27 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
   const args = buildArgs({ ...options, ...resolved, args: resolvedArgs });
 
   // Puppeteer handles proxy via CLI args, not a separate option.
-  // Chromium's --proxy-server does NOT support inline credentials,
-  // so we strip them and use page.authenticate() instead.
+  // SOCKS5: Chrome supports inline credentials natively (RFC 1929 auth).
+  // HTTP: Chrome does NOT support inline credentials — strip them and
+  // use page.authenticate() for Proxy-Authorization headers instead.
   let proxyAuth: { username: string; password: string } | undefined;
   if (options.proxy) {
-    if (typeof options.proxy === "string") {
+    if (isSocksProxy(options.proxy)) {
+      // SOCKS5: pass full URL with credentials to Chrome directly
+      const { proxyArgs } = resolveProxyConfig(options.proxy);
+      args.push(...proxyArgs);
+    } else if (typeof options.proxy === "string") {
       const { server, username, password } = parseProxyUrl(options.proxy);
       args.push(`--proxy-server=${server}`);
       if (username) {
         proxyAuth = { username, password: password ?? "" };
       }
     } else {
-      // Strip any inline credentials from the server URL — Chromium's
-      // --proxy-server doesn't support them; use page.authenticate() instead.
       const parsed = parseProxyUrl(options.proxy.server);
       args.push(`--proxy-server=${parsed.server}`);
       if (options.proxy.bypass) {
         args.push(`--proxy-bypass-list=${options.proxy.bypass}`);
       }
-      // Explicit username/password fields take precedence over inline creds
       const username = options.proxy.username ?? parsed.username;
       const password = options.proxy.password ?? parsed.password;
       if (username) {

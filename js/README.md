@@ -63,9 +63,12 @@ await browser.close();
 ```javascript
 import { launch, launchContext, launchPersistentContext } from 'cloakbrowser';
 
-// With proxy
+// With proxy (HTTP or SOCKS5)
 const browser = await launch({
   proxy: 'http://user:pass@proxy:8080',
+});
+const browser = await launch({
+  proxy: 'socks5://user:pass@proxy:1080',
 });
 
 // With proxy object (bypass, separate auth fields)
@@ -211,7 +214,7 @@ const page = await browser.newPage();
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20
 - One of: `playwright-core` >= 1.40 or `puppeteer-core` >= 21
 
 ## Troubleshooting

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseProxyUrl } from "../src/proxy.js";
+import { parseProxyUrl, isSocksProxy, resolveProxyConfig } from "../src/proxy.js";
 import type { LaunchOptions } from "../src/types.js";
 
 describe("parseProxyUrl", () => {
@@ -113,5 +113,94 @@ describe("bare proxy format (user:pass@host:port)", () => {
 
   it("bare no credentials passes through unchanged", () => {
     expect(parseProxyUrl("proxy:8080")).toEqual({ server: "proxy:8080" });
+  });
+});
+
+describe("isSocksProxy", () => {
+  it("detects socks5 string", () => {
+    expect(isSocksProxy("socks5://user:pass@host:1080")).toBe(true);
+  });
+
+  it("detects socks5h string", () => {
+    expect(isSocksProxy("socks5h://host:1080")).toBe(true);
+  });
+
+  it("case insensitive", () => {
+    expect(isSocksProxy("SOCKS5://host:1080")).toBe(true);
+  });
+
+  it("rejects http", () => {
+    expect(isSocksProxy("http://host:8080")).toBe(false);
+  });
+
+  it("detects socks5 dict", () => {
+    expect(isSocksProxy({ server: "socks5://host:1080" })).toBe(true);
+  });
+
+  it("rejects http dict", () => {
+    expect(isSocksProxy({ server: "http://host:8080" })).toBe(false);
+  });
+
+  it("returns false for undefined", () => {
+    expect(isSocksProxy(undefined)).toBe(false);
+  });
+});
+
+describe("resolveProxyConfig", () => {
+  it("returns empty for undefined", () => {
+    const { proxyOption, proxyArgs } = resolveProxyConfig(undefined);
+    expect(proxyOption).toBeUndefined();
+    expect(proxyArgs).toEqual([]);
+  });
+
+  it("returns playwright dict for http string", () => {
+    const { proxyOption, proxyArgs } = resolveProxyConfig("http://user:pass@proxy:8080");
+    expect(proxyOption).toEqual({ server: "http://proxy:8080", username: "user", password: "pass" });
+    expect(proxyArgs).toEqual([]);
+  });
+
+  it("returns playwright dict for http dict", () => {
+    const proxy = { server: "http://proxy:8080", bypass: ".example.com" };
+    const { proxyOption, proxyArgs } = resolveProxyConfig(proxy);
+    expect(proxyOption).toEqual(proxy);
+    expect(proxyArgs).toEqual([]);
+  });
+
+  it("returns chrome arg for socks5 string", () => {
+    const { proxyOption, proxyArgs } = resolveProxyConfig("socks5://user:pass@host:1080");
+    expect(proxyOption).toBeUndefined();
+    expect(proxyArgs).toEqual(["--proxy-server=socks5://user:pass@host:1080"]);
+  });
+
+  it("returns chrome arg for socks5 no auth", () => {
+    const { proxyOption, proxyArgs } = resolveProxyConfig("socks5://host:1080");
+    expect(proxyOption).toBeUndefined();
+    expect(proxyArgs).toEqual(["--proxy-server=socks5://host:1080"]);
+  });
+
+  it("returns chrome arg for socks5h string", () => {
+    const { proxyOption, proxyArgs } = resolveProxyConfig("socks5h://user:pass@host:1080");
+    expect(proxyOption).toBeUndefined();
+    expect(proxyArgs).toEqual(["--proxy-server=socks5h://user:pass@host:1080"]);
+  });
+
+  it("reconstructs URL from socks5 dict with auth", () => {
+    const { proxyOption, proxyArgs } = resolveProxyConfig({
+      server: "socks5://host:1080",
+      username: "user",
+      password: "p@ss",
+    });
+    expect(proxyOption).toBeUndefined();
+    expect(proxyArgs.length).toBe(1);
+    expect(proxyArgs[0]).toContain("--proxy-server=socks5://user:p%40ss@host:1080");
+  });
+
+  it("includes bypass for socks5 dict", () => {
+    const { proxyArgs } = resolveProxyConfig({
+      server: "socks5://host:1080",
+      bypass: ".example.com",
+    });
+    expect(proxyArgs).toContain("--proxy-server=socks5://host:1080");
+    expect(proxyArgs).toContain("--proxy-bypass-list=.example.com");
   });
 });

@@ -113,4 +113,29 @@ describe("puppeteer launch", () => {
     expect(callArgs.args).toContain("--disable-gpu");
     expect(callArgs.args).toContain("--no-first-run");
   });
+
+  it("keeps SOCKS5 credentials in --proxy-server URL", async () => {
+    const { launch } = await import("../src/puppeteer.js");
+    const browser = await launch({ proxy: "socks5://user:pass@proxy:1080" });
+
+    const callArgs = vi.mocked(puppeteerMock.default.launch).mock.calls[0][0];
+    expect(callArgs.args).toContain("--proxy-server=socks5://user:pass@proxy:1080");
+
+    // Should NOT set up page.authenticate for SOCKS5
+    const page = await browser.newPage();
+    expect(page.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("reconstructs SOCKS5 dict with auth into --proxy-server URL", async () => {
+    const { launch } = await import("../src/puppeteer.js");
+    const browser = await launch({
+      proxy: { server: "socks5://proxy:1080", username: "user", password: "p@ss" },
+    });
+
+    const callArgs = vi.mocked(puppeteerMock.default.launch).mock.calls[0][0];
+    expect(callArgs.args).toContain("--proxy-server=socks5://user:p%40ss@proxy:1080");
+
+    const page = await browser.newPage();
+    expect(page.authenticate).not.toHaveBeenCalled();
+  });
 });
