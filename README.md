@@ -626,12 +626,35 @@ Supported by the binary but **not set by default** — pass via `args` to custom
 | `--fingerprint-locale` | Locale (e.g. `en-US`) |
 | `--fingerprint-storage-quota` | Override storage quota in MB — affects `storage.estimate()`, `storageBuckets`, and legacy webkit APIs. Auto-normalized when `--fingerprint` is set |
 | `--fingerprint-taskbar-height` | Override taskbar height (binary defaults: Win=48, Mac=95, Linux=0) |
-| `--fingerprint-fonts-dir` | Path to cross-platform font directory |
+| `--fingerprint-fonts-dir` | Path to directory containing target-platform fonts (see [Font Setup on Linux](#font-setup-on-linux)) |
 | `--fingerprint-webrtc-ip` | WebRTC ICE candidate IP replacement. Use `auto` to resolve from proxy exit IP (makes an HTTP call through the proxy), or pass an explicit IP. Auto-injected when `geoip=True` |
 | `--fingerprint-noise=false` | Disable noise injection (canvas, WebGL, audio, client rects) while keeping the deterministic fingerprint seed active |
 | `--enable-blink-features=FakeShadowRoot` | Access closed shadow DOM elements |
 
 > **Note:** All stealth tests were verified with the default fingerprint config above. Changing these flags may affect detection results — test your configuration before using in production.
+
+### Font Setup on Linux
+
+When spoofing Windows on Linux, the binary hides Linux-specific fonts from detection scripts. However, Windows fonts won't be available unless they're actually installed on the system. Without them, detection tools like CreepJS will see very few fonts — a signal that doesn't match a real Windows machine.
+
+To fix this, install a full set of Windows fonts and point the binary at them:
+
+```bash
+# 1. Copy fonts from a Windows machine's C:\Windows\Fonts\ directory
+#    (ttf-mscorefonts-installer only has old XP-era fonts — not enough)
+mkdir -p ~/.local/share/fonts/windows
+cp /path/to/windows/fonts/*.ttf ~/.local/share/fonts/windows/
+cp /path/to/windows/fonts/*.TTF ~/.local/share/fonts/windows/
+
+# 2. Register them with fontconfig (mandatory — without this, the browser can't see them)
+fc-cache -f
+
+# 3. Launch with the fonts directory
+browser = launch(
+    args=["--fingerprint-fonts-dir=/home/user/.local/share/fonts/windows"],
+    headless=False,
+)
+```
 
 ### Examples
 
