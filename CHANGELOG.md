@@ -8,6 +8,16 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ## [Unreleased]
 
+## [0.3.26] — 2026-04-28
+
+- **[binary]** Windows x64 upgraded to Chromium 146.0.7680.177.4 — 57 source-level fingerprint patches (up from 33 on 145.0.7632.159.7), now matches Linux. Includes all binary improvements from 0.3.18–0.3.25: native SOCKS5 proxy with UDP ASSOCIATE (QUIC/HTTP3), WebRTC IP spoofing, proxy signal removal, CDP input stealth, storage quota normalization, WebAuthn/AAC/window position patches, WebGL and canvas consistency fixes, expanded GPU model database
+- **[wrapper]** Auto URL-encode SOCKS5 credentials containing special characters in string URLs (#157)
+- **[wrapper]** AWS Lambda integration example with cold-start hardening and handler-side retry orchestration (#177, thanks [@AlexTech314](https://github.com/AlexTech314))
+- **[docker]** Add emoji and extended font packages to resolve Kasada/Akamai canvas fingerprint blocks (#179)
+- **[docs]** Add Font Setup on Linux section to README (#179)
+- **[docs]** Add Deployment Integrations section to README (#177)
+- **[meta]** Bump GitHub Actions dependencies (#178)
+
 ## [0.3.25] — 2026-04-16
 
 - **[wrapper]** Python: add `launch_context_async()` — async counterpart to `launch_context()`. Returns a BrowserContext with all kwargs forwarded to `browser.new_context()`, enabling `storage_state`, `permissions`, `extra_http_headers`, etc. without a persistent profile folder. Closes #141.

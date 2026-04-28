@@ -128,7 +128,7 @@ Open [http://localhost:8080](http://localhost:8080). Create a profile. Click **L
 
 ---
 
-## Latest: v0.3.25 (Chromium 146.0.7680.177.3)
+## Latest: v0.3.26 (Chromium 146.0.7680.177.4)
 
 - **`launch_context_async()`** — async counterpart to `launch_context()`. Forwards kwargs to `browser.new_context()` for `storage_state`, `permissions`, `extra_http_headers` without a persistent profile folder.
 - **JS `contextOptions` escape hatch** — forward arbitrary options (including `storageState`) to Playwright's `newContext()` from `launchContext()` / `launchPersistentContext()`.
@@ -739,11 +739,11 @@ browser = await launch_async(args=["--remote-debugging-port=9242"])
 
 | Platform | Chromium | Patches | Status |
 |---|---|---|---|
-| Linux x86_64 | 146 | 49 | ✅ Latest |
-| Linux arm64 (RPi, Graviton) | 146 | 49 | ✅ Latest |
+| Linux x86_64 | 146 | 57 | ✅ Latest |
+| Linux arm64 (RPi, Graviton) | 146 | 57 | ✅ Latest |
 | macOS arm64 (Apple Silicon) | 145 | 26 | ✅ |
 | macOS x86_64 (Intel) | 145 | 26 | ✅ |
-| Windows x86_64 | 145 | 48 | ✅ |
+| Windows x86_64 | 146 | 57 | ✅ Latest |
 
 The wrapper auto-downloads the correct binary for your platform.
 
@@ -1142,9 +1142,9 @@ A: Yes. Pass `proxy="http://user:pass@host:port"` or `proxy="socks5://user:pass@
 
 | Feature | Status |
 |---------|--------|
-| Linux x64 — Chromium 146 (49 patches) | ✅ Released |
+| Linux x64 — Chromium 146 (57 patches) | ✅ Released |
 | macOS arm64/x64 — Chromium 145 (26 patches) | ✅ Released |
-| Windows x64 — Chromium 145 (33 patches) | ✅ Released |
+| Windows x64 — Chromium 146 (57 patches) | ✅ Released |
 | JavaScript/Puppeteer + Playwright support | ✅ Released |
 | Fingerprint rotation per session | ✅ Released |
 | Built-in proxy rotation | 📋 Planned |

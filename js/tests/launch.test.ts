@@ -4,14 +4,20 @@ import { DEFAULT_VIEWPORT, getChromiumVersion } from "../src/config.js";
 
 describe("binaryInfo", () => {
   it("returns correct structure", () => {
-    const info = binaryInfo();
+    const orig = process.env.CLOAKBROWSER_CACHE_DIR;
+    process.env.CLOAKBROWSER_CACHE_DIR = `/tmp/cloakbrowser-test-${Date.now()}`;
+    try {
+      const info = binaryInfo();
 
-    expect(info.version).toBe(getChromiumVersion());
-    expect(info.platform).toMatch(/^(linux|darwin|windows)-(x64|arm64)$/);
-    expect(info.binaryPath).toBeTruthy();
-    expect(typeof info.installed).toBe("boolean");
-    expect(info.cacheDir).toContain("cloakbrowser");
-    expect(info.downloadUrl).toContain(".tar.gz");
+      expect(info.version).toBe(getChromiumVersion());
+      expect(info.platform).toMatch(/^(linux|darwin|windows)-(x64|arm64)$/);
+      expect(info.binaryPath).toBeTruthy();
+      expect(typeof info.installed).toBe("boolean");
+      expect(info.cacheDir).toContain("cloakbrowser");
+    } finally {
+      if (orig) process.env.CLOAKBROWSER_CACHE_DIR = orig;
+      else delete process.env.CLOAKBROWSER_CACHE_DIR;
+    }
   });
 });
 

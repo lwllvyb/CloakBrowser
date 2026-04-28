@@ -320,8 +320,14 @@ describe("download fallback", () => {
 
 describe("effective version", () => {
   it("returns platform version when no marker exists", () => {
-    // Default behavior — no marker file in test environment
-    expect(getEffectiveVersion()).toBe(getChromiumVersion());
+    const orig = process.env.CLOAKBROWSER_CACHE_DIR;
+    process.env.CLOAKBROWSER_CACHE_DIR = `/tmp/cloakbrowser-test-${Date.now()}`;
+    try {
+      expect(getEffectiveVersion()).toBe(getChromiumVersion());
+    } finally {
+      if (orig) process.env.CLOAKBROWSER_CACHE_DIR = orig;
+      else delete process.env.CLOAKBROWSER_CACHE_DIR;
+    }
   });
 });
 
