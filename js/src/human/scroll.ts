@@ -151,7 +151,7 @@ export async function humanScrollIntoView(
  *
  * ``timeout`` is forwarded to Playwright's ``boundingBox({ timeout })`` so
  * callers like ``page.click('#x', { timeout: 5000 })`` can wait longer for
- * slow-loading elements (#137). Default stays 2000ms when not specified.
+ * slow-loading elements (#172). Default stays 2000ms when not specified.
  */
 export async function scrollToElement(
   page: Page,

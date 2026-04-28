@@ -612,7 +612,7 @@ function patchSingleElementHandle(
   // --- Helper: get box and move cursor. Accepts a per-call ``callCfg``
   // so type/fill overrides like ``el.type(text, { human_config: {...} })``
   // carry through to mouse timing for that single call. Also scrolls into
-  // view first so off-screen elements work (#129, #137 follow-up).
+  // view first so off-screen elements work (#129, #172 follow-up).
   const moveToElement = async (callCfg: HumanConfig = cfg) => {
     await (page as any)._ensureCursorInit();
 

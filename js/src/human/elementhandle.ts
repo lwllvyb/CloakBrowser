@@ -136,7 +136,7 @@ export function patchSingleElementHandle(
   // ``el.type(text, { human_config: { typing_delay: 30 } })`` carry through to
   // mouse movement & idle timing for that single call.
   // Also scrolls the element into view first so off-screen elements work
-  // (#129, #137 follow-up): otherwise boundingBox() returns null and we'd
+  // (#129, #172 follow-up): otherwise boundingBox() returns null and we'd
   // silently fall back to the unpatched native method.
   const moveToElement = async (callCfg: HumanConfig = cfg) => {
     // Ensure cursor is initialized
